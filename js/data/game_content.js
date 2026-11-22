@@ -5,6 +5,8 @@
    - 第 3 攤支援「點時間軸找線索解鎖公式」＋動態數字隨機試算題
    - 第 4 攤支援「真輪盤雙風險事件＋跨階段保單延續條件」
    - 第 5 攤支援「25 號送件櫃檯實戰」動態日期情境題
+   - v16 校正：第 4 攤理賠金額改成照簡章算（算式寫在文字裡）、股金改「分月存」（每月最多算 3,000 元）、
+     不寫「住院日額和實支實付一起領」（簡章沒寫）；第 2 攤年齡前後矛盾；25 日送件不寫「含當天」
    ========================================================================== */
 window.GAME_CONTENT = {
   mascotQuotes: [
@@ -345,9 +347,9 @@ window.GAME_CONTENT = {
     // --- Hard 進階配對 ---
     {
       id: 'cl7', diff: 'hard',
-      name: '71 歲舊防癌保戶阿珠姐', avatar: '👵', imgKey: 'char_grandma',
+      name: '剛滿 70 歲的舊防癌保戶阿珠姐', avatar: '👵', imgKey: 'char_grandma',
       speech: '「我從 60 歲就一直續保防癌計畫一而且從未罹癌，今年剛滿 70 歲過生日，還能繼續保防癌嗎？要轉哪個計畫？」',
-      clues: ['年齡：71 歲', '資歷：原保防癌計畫一且未罹癌', '需求：延續防癌保障至 75 歲'],
+      clues: ['年齡：剛滿 70 歲', '資歷：原保防癌計畫一且未罹癌', '需求：延續防癌保障至 75 歲'],
       options: [
         { title: '社員防癌互助基金－計畫三', sub: '年繳 4,550 元｜專供已保計畫一/二且未罹癌續約社員滿 70 歲銜接至滿 75 歲', ok: true, checks: [true, true, true] },
         { title: '繼續續約防癌計畫一', sub: '計畫一、二續約年齡僅至滿 70 歲止', ok: false, checks: [false, true, false] },
@@ -373,9 +375,9 @@ window.GAME_CONTENT = {
     },
     {
       id: 'cl9', diff: 'hard',
-      name: '46 歲剛滿 45 歲的 D 計畫續約社員', avatar: '👨‍💼', imgKey: 'char_office',
+      name: '剛滿 45 足歲的 D 計畫續約社員', avatar: '👨‍💼', imgKey: 'char_office',
       speech: '「我原本參加社員團體 D 計畫，今年剛滿 45 足歲了！我希望繼續保留『疾病住院日額』保障，續約該轉哪個計畫？」',
-      clues: ['年齡：46 歲（原 D 計畫續約）', '需求：一定要保留疾病住院日額', '續約轉軌規則'],
+      clues: ['年齡：剛滿 45 足歲（原 D 計畫續約）', '需求：一定要保留疾病住院日額', '續約轉軌規則'],
       options: [
         { title: '轉至社員團體－C 計畫', sub: '年繳 4,640 元｜滿 45 歲後唯一仍含疾病住院 500/日＋意外住院 1,000/日，可續至 75 歲', ok: true, checks: [true, true, true] },
         { title: '繼續續約團體 D 計畫至 75 歲', sub: 'D 計畫滿 45 足歲後必須轉至 A、B、C、F 計畫', ok: false, checks: [false, true, false] },
@@ -720,7 +722,7 @@ window.GAME_CONTENT = {
       // Dynamic 3 (Hard): LS age-tier withdrawal calculation
       const pre60 = pick([60000, 80000]);
       const wd = pick([10000, 20000]);
-      const addAfter = pick([20000, 40000]);
+      const addAfter = pick([30000, 40000]); // 不能等於退股金額，否則兩個錯誤選項金額會重複
       const lowWater = pre60 - wd;
       const lsAns = lowWater + Math.round(addAfter * 0.75);
       out.push({
@@ -768,17 +770,17 @@ window.GAME_CONTENT = {
           wedgeLabel: '沙發摔傷骨折', wedgeColor: '#E88B5A',
           title: '🎲 命運輪盤：學步期爬沙發摔落，手肘骨折未住院！',
           needPolicy: 'E',
-          hitText: '幸好有保【團體 E 計畫】！理賠骨折未住院＋急診門診手術，守住 12,000 元醫藥費！',
+          hitText: '幸好有保【團體 E 計畫】！骨折未住院給付：假設表訂 24 日 × 日額 1,000 元 × 1/2（完全骨折）＝ 12,000 元！',
           missText: '沒保團體 E 計畫，爸媽只好自掏腰包 12,000 元照顧費用（還好寶寶平安康復）。',
           shieldGain: 12000, missLoss: 12000
         },
         {
-          wedgeLabel: '幼兒腫瘤治療', wedgeColor: '#C75284',
-          title: '🎲 命運輪盤：健檢發現幼兒罕見腫瘤，需住院治療 6 天！',
+          wedgeLabel: '兒童癌症治療', wedgeColor: '#C75284',
+          title: '🎲 命運輪盤：健檢發現兒童癌症，開刀並住院 6 天！',
           needPolicy: 'CANCER1',
-          hitText: '還好出生出院就保了【防癌計畫一】！住院＋手術給付立即到位，守住 18,000 元！',
+          hitText: '還好出生出院就保了【防癌計畫一】！外科手術 30,000 元＋癌症住院 1,000×6 天＝6,000 元，共 36,000 元！',
           missText: '沒想到這麼小也會遇到癌症風險，自費醫療花了 15,000 元（防癌出生正常出院就能保喔！）。',
-          shieldGain: 18000, missLoss: 15000
+          shieldGain: 36000, missLoss: 15000
         }
       ]
     },
@@ -790,53 +792,53 @@ window.GAME_CONTENT = {
       actions: [
         { id: 'buy_acc4', label: '保「團體意外－計畫四」(含大眾運輸 400/600 萬)', cost: 2330, tag: '高意外+住院', policy: 'ACC4' },
         { id: 'buy_ci', label: '保「重大疾病」(15~40歲只要 $330！)', cost: 330, tag: '7大重疾15萬', policy: 'CI' },
-        { id: 'save_ls_2', label: '強迫儲蓄存股金 4,000 元 (60歲前 100%！)', cost: 4000, tag: 'LS 100%級距', lsAdd: 4000, lsRate: 1.0 }
+        { id: 'save_ls_2', label: '分月存股金 4,000 元（每月不超過 3,000 元，60 歲前 100%）', cost: 4000, tag: 'LS 100%級距', lsAdd: 4000, lsRate: 1.0 }
       ],
       events: [
         {
           wedgeLabel: '雨天騎車打滑', wedgeColor: '#DF5646',
-          title: '🎲 命運輪盤：雨天騎車打滑住院 10 天＋門診追蹤！',
+          title: '🎲 命運輪盤：雨天騎車打滑，開刀住院 10 天，出院一週內回診 2 次！',
           needPolicy: 'ACC4',
-          hitText: '有保【團體意外計畫四】！意外住院 1,000×10天＋前後門診＋手術津貼，獲賠 16,000 元！',
+          hitText: '有保【團體意外計畫四】！意外住院 1,000×10 天＝10,000 元＋住院手術津貼 5,000 元＋前後一週門診 500×2 次＝1,000 元，共 16,000 元！',
           missText: '少了意外醫療日額，請假休養加上醫療雜費倒貼 16,000 元！',
           shieldGain: 16000, missLoss: 16000
         },
         {
           wedgeLabel: '突發腦中風', wedgeColor: '#85538B',
-          title: '🎲 命運輪盤：熬夜加班竟引發年輕型重度腦中風！',
+          title: '🎲 命運輪盤：熬夜加班引發腦中風，留下重度障礙！',
           needPolicy: 'CI',
-          hitText: '一年只要 330 元的【重大疾病】立大功！一次給付應急金，直接替家庭守住 25,000 元！',
+          hitText: '一年只要 330 元的【重大疾病】立大功！腦中風後障礙（重度）屬 7 項重大疾病，一次給付 15 萬元！',
           missText: '省了 330 元沒保重大疾病，急診復健支出倒貼 20,000 元！',
-          shieldGain: 25000, missLoss: 20000
+          shieldGain: 150000, missLoss: 20000
         }
       ]
     },
     {
       ageLabel: '38 歲', stageTitle: '成家立業！把握 45 歲前限定視窗', icon: '🏡',
-      story: '買房貸款成家了！趁「未滿 45 歲」還有 D 計畫，同時有社裡免費附贈的 LP 貸款安全護身！',
+      story: '買房貸款成家了！趁「未滿 45 歲」還有 D 計畫；向社裡借款也有 LP 貸款安全互助基金保障（社員不必另外付費）！',
       budget: 12000,
       riskRadar: '急性盲腸炎住院 ／ 早期癌症手術',
       actions: [
         { id: 'buy_d', label: '搶保「團體 D 計畫」(45歲未滿限定！含疾病住院)', cost: 5350, tag: '一般50萬+疾病住院', policy: 'D' },
         { id: 'buy_c2', label: '保「防癌計畫二」(高倍癌症醫療)', cost: 3520, tag: '住院2000/手術6萬', policy: 'CANCER2', grants: 'cancerPrior' },
-        { id: 'save_ls_3', label: '穩健續存股金 6,000 元 (衝刺 60 歲前 100% 額度)', cost: 6000, tag: 'LS 100%級距', lsAdd: 6000, lsRate: 1.0 }
+        { id: 'save_ls_3', label: '分月續存股金 6,000 元（每月不超過 3,000 元，60 歲前 100%）', cost: 6000, tag: 'LS 100%級距', lsAdd: 6000, lsRate: 1.0 }
       ],
       events: [
         {
           wedgeLabel: '盲腸炎住院', wedgeColor: '#2C8C6D',
           title: '🎲 命運輪盤：工作太操勞，盲腸炎急性住院 8 天！',
           needPolicy: 'D',
-          hitText: '還好趁 45 歲前保了【團體 D 計畫】！已過 31 天等待期，疾病住院 1,000×8 天守住 20,000 元！',
+          hitText: '還好趁 45 歲前保了【團體 D 計畫】！已過 31 天等待期，疾病住院 1,000×8 天＝8,000 元！',
           missText: '意外險不賠疾病住院啊！這次住院自費病房和薪水損失花了 20,000 元。',
-          shieldGain: 20000, missLoss: 20000
+          shieldGain: 8000, missLoss: 20000
         },
         {
           wedgeLabel: '早期癌症手術', wedgeColor: '#C75284',
-          title: '🎲 命運輪盤：健檢發現原位腫瘤，安排外科手術住院 5 天！',
+          title: '🎲 命運輪盤：健檢發現早期癌症，安排外科手術住院 5 天！',
           needPolicy: 'CANCER2',
-          hitText: '【防癌計畫二】超給力！外科手術 6 萬＋住院日額 2,000×5 天，立刻守住 26,000 元！',
+          hitText: '【防癌計畫二】超給力！外科手術 60,000 元＋癌症住院 2,000×5 天＝10,000 元，共 70,000 元！',
           missText: '沒配防癌計畫二，自費標靶與手術休養大失血 22,000 元！',
-          shieldGain: 26000, missLoss: 22000
+          shieldGain: 70000, missLoss: 22000
         }
       ]
     },
@@ -848,24 +850,24 @@ window.GAME_CONTENT = {
       actions: [
         { id: 'buy_off_a2', label: '全體幹部選「幹部 A2」(1,675元超高住院/手術)', cost: 1675, tag: '意外住院2千/手術1萬', policy: 'OFF_A2' },
         { id: 'buy_ci_50', label: '續保「重大疾病」(50~60歲 $1,560)', cost: 1560, tag: '7大重疾15萬', policy: 'CI50' },
-        { id: 'save_ls_4', label: '趁 60 歲前大存股金 9,000 元 (100%最後衝刺！)', cost: 9000, tag: 'LS 100%黃金窗', lsAdd: 9000, lsRate: 1.0 }
+        { id: 'save_ls_4', label: '趁 60 歲前分月存股金 9,000 元（每月不超過 3,000 元，100% 最後衝刺）', cost: 9000, tag: 'LS 100%黃金窗', lsAdd: 9000, lsRate: 1.0 }
       ],
       events: [
         {
           wedgeLabel: '冠狀動脈繞道', wedgeColor: '#85538B',
           title: '🎲 命運輪盤：體檢發現冠狀動脈阻塞，安排繞道手術！',
           needPolicy: 'CI50',
-          hitText: '【重大疾病互助基金】發威！冠狀動脈繞道屬 7 大重疾，一次給付 15 萬應急，守住 45,000 元！',
-          missText: '沒有續保重大疾病基金，自費心導管支架與休養大失血 45,000 元！',
-          shieldGain: 45000, missLoss: 45000
+          hitText: '【重大疾病互助基金】發威！冠狀動脈繞道手術屬 7 項重大疾病，一次給付 15 萬元！',
+          missText: '沒有參加重大疾病互助基金，手術自費與休養大失血 45,000 元！',
+          shieldGain: 150000, missLoss: 45000
         },
         {
           wedgeLabel: '社務籌備摔傷', wedgeColor: '#C88312',
           title: '🎲 命運輪盤：佈置社員大會場地不慎跌傷，動手術住院 5 天！',
           needPolicy: 'OFF_A2',
-          hitText: '【幹部 A2】CP 值封神！意外住院 2,000×5＋手術津貼 1 萬，直接守住 24,000 元！',
+          hitText: '【幹部 A2】CP 值封神！意外住院 2,000×5 天＝10,000 元＋意外住院手術津貼 10,000 元，共 20,000 元！',
           missText: '少了幹部 A2 的高額意外日額與手術津貼，自費休養倒貼 20,000 元！',
-          shieldGain: 24000, missLoss: 20000
+          shieldGain: 20000, missLoss: 20000
         }
       ]
     },
@@ -911,17 +913,17 @@ window.GAME_CONTENT = {
       events: [
         {
           wedgeLabel: '澆花滑倒撞傷', wedgeColor: '#6C8B3E',
-          title: '🎲 命運輪盤：早起澆花滑倒撞傷縫合＋住院 5 天，自費醫材 9,500 元！',
+          title: '🎲 命運輪盤：早起澆花滑倒撞傷，到醫院縫合、醫療費用 9,500 元（沒有住院）！',
           needPolicy: 'SENIOR',
-          hitText: '【松年意外】太神了！實支實付 1 萬元＋住院日額 5,000＋門診，理賠 18,000 元完全罩住！',
-          missText: '70 歲後沒轉保松年意外，自費醫材和病房全自己扛，損失 18,000 元！',
-          shieldGain: 18000, missLoss: 18000
+          hitText: '【松年意外】太神了！意外醫療實支實付（每一事故最高 1 萬元），9,500 元醫療費用核實給付！',
+          missText: '70 歲後沒加保松年意外，醫療費用 9,500 元全自己扛！',
+          shieldGain: 9500, missLoss: 9500
         },
         {
           wedgeLabel: '73歲癌症治療', wedgeColor: '#C75284',
-          title: '🎲 命運輪盤：73 歲定期追蹤需接受癌症門診與住院照護！',
+          title: '🎲 命運輪盤：73 歲健康檢查發現癌症，住院 14 天＋門診治療 10 次！',
           needPolicy: 'CANCER3',
-          hitText: '還好 63 歲有續保、72 歲成功銜接【防癌計畫三】！癌症住院與門診理賠守住 22,000 元！',
+          hitText: '還好 63 歲有續保、72 歲成功銜接【防癌計畫三】！癌症住院 1,000×14 天＝14,000 元＋門診 800×10 次＝8,000 元，共 22,000 元！',
           missText: '缺少防癌計畫三銜接，73 歲癌症治療自費支出 18,000 元（記得 70 歲前要持續續保喔！）。',
           shieldGain: 22000, missLoss: 18000
         }
@@ -931,27 +933,27 @@ window.GAME_CONTENT = {
       ageLabel: '82 歲', stageTitle: '85 歲圓滿終點站！松年續約守護', icon: '🎂',
       story: '已經 82 歲囉！一般團體與意外都只到 75 歲、滿 75 歲後存股金 LS 也為 0%；80 歲前若有保松年意外，現在就能一路續約到 85 歲！',
       budget: 4500,
-      riskRadar: '進香扭傷住院 ／ 浴室滑倒急診',
+      riskRadar: '進香跌倒骨折 ／ 浴室滑倒急診',
       actions: [
         { id: 'renew_senior', label: '續約「松年意外」($2,000，守護到滿 85 歲！)', cost: 2000, tag: '需滿 80 歲前已投保', policy: 'SENIOR85', requireFlag: 'senior72', lockMsg: '🔒 松年意外初次限未滿 80 歲，需於 72 歲先加保才能在 82 歲續約！' },
         { id: 'enjoy_life', label: '留 2,000 元請子孫吃辦桌（75 歲前舊 LS 活到幾歲都有效！）', cost: 2000, tag: '老本加值終身有效', policy: 'FEAST' }
       ],
       events: [
         {
-          wedgeLabel: '進香扭傷住院', wedgeColor: '#DD7540',
-          title: '🎲 最終輪盤：83 歲跟社區去進香扭傷住院檢查 3 天！',
+          wedgeLabel: '進香跌倒骨折', wedgeColor: '#DD7540',
+          title: '🎲 最終輪盤：83 歲跟社區去進香跌倒骨折，開刀住院 3 天！',
           needPolicy: 'SENIOR85',
-          hitText: '83 歲依然有【松年意外】續約保護！醫藥費與住院日額領回 15,000 元，子孫直呼超有智慧！',
+          hitText: '83 歲依然有【松年意外】續約保護！意外住院 1,000×3 天＝3,000 元＋意外住院手術津貼 5,000 元，共 8,000 元！',
           missText: '少了松年意外續約保護，住院自費花了 15,000 元，幸好 75 歲前存的 LS 股金依舊穩穩守護家屬！',
-          shieldGain: 15000, missLoss: 15000
+          shieldGain: 8000, missLoss: 15000
         },
         {
           wedgeLabel: '浴室滑倒實支', wedgeColor: '#6C8B3E',
-          title: '🎲 最終輪盤：84 歲清晨浴室滑倒掛急診，自費敷料與檢查！',
+          title: '🎲 最終輪盤：84 歲清晨浴室滑倒掛急診，醫療費用 8,000 元！',
           needPolicy: 'SENIOR85',
-          hitText: '84 歲【松年意外】實支實付 1 萬再次救場！急診與自費項目全額罩住，省下 15,000 元！',
-          missText: '80 歲後沒有松年意外續約，急診自費花了 15,000 元，記得一定要在未滿 80 歲前先加保喔！',
-          shieldGain: 15000, missLoss: 15000
+          hitText: '84 歲【松年意外】實支實付再次救場！每一事故最高 1 萬元，8,000 元醫療費用核實給付！',
+          missText: '沒有松年意外續約，急診醫療費用 8,000 元全自己付，記得一定要在未滿 80 歲前先加保喔！',
+          shieldGain: 8000, missLoss: 8000
         }
       ]
     }
@@ -1074,7 +1076,7 @@ window.GAME_CONTENT = {
   // 25 號送件櫃檯實戰動態情境產生器
   buildDynamicCounterQuestions() {
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    const dayOnTime = pick([18, 20, 22, 24, 25]);
+    const dayOnTime = pick([18, 20, 22, 24]); // 簡章只寫「每月 25 日前」，沒寫 25 日當天算不算，所以不出 25 日
     const dayLate = pick([26, 27, 28, 29]);
 
     const pool = [
@@ -1083,7 +1085,7 @@ window.GAME_CONTENT = {
         title: `📬 社員團體意外：10 月 ${dayOnTime} 日送達協會`,
         sub: `社員 10 月 ${dayOnTime} 日把申請書寄達協會（團體意外受理至次年 4/25），何時生效？`,
         answer: 'next1',
-        explain: `10 月 ${dayOnTime} 日在「當月 25 日（含）前」送達協會且未逾年度截止日，次月 1 日（11/1）準時生效！`,
+        explain: `10 月 ${dayOnTime} 日在「當月 25 日前」送達協會且未逾年度截止日，次月 1 日（11/1）準時生效！`,
         taigi: '25 號前寄到，下個月初一準時生效！',
         voiceKey: 'taigi_mail'
       },
@@ -1164,7 +1166,7 @@ window.GAME_CONTENT = {
     }
     if (kind === 'calendar') {
       if (item.mode === 'counter25') {
-        return '記住兩個判斷步驟：① 先看有沒有超過「年度最後受理日」；② 沒超過的話，當月 25 日(含)前送達就是「次月 1 日生效」，超過 25 日就順延 1 個月！';
+        return '記住兩個判斷步驟：① 先看有沒有超過「年度最後受理日」；② 沒超過的話，當月 25 日前送達就是「次月 1 日生效」，超過 25 日就順延 1 個月！';
       }
       return '口訣：「3 幹部、4 團體、6 防癌、8 重疾、9 意外、10 松年」！';
     }

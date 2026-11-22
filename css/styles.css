@@ -1418,6 +1418,27 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
   animation: popIn 0.24s ease;
 }
 .intro-video-card video { width: 100%; max-height: 68dvh; display: block; object-fit: cover; }
+.intro-video-card { position: relative; }
+/* 瀏覽器擋下有聲自動播放時，影片上的大顆開聲音按鈕 */
+.intro-unmute-btn {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  padding: 14px 24px;
+  border-radius: 999px;
+  background: rgba(217, 72, 59, 0.96);
+  border: 3px solid #FFF4D6;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  animation: dockPulse 2.1s infinite;
+  z-index: 2;
+}
+.intro-unmute-btn:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.96); }
 .intro-video-footer {
   display: flex;
   align-items: center;
@@ -1452,3 +1473,323 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
   text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
+
+/* ==================== v16 互助島導覽：半高抽屜 × 站卡 × 身分路線 × 上一站／下一站 ==================== */
+.float-top-bar.popover-open { z-index: 50; }           /* 島景彈窗疊在導覽抽屜上面 */
+.drawer-header-btns { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.drawer-expand { display: none; font-size: 1.15rem; }
+.dock-btn-primary .dock-star { color: #FFF4D6; }
+.fb2d-wide { grid-column: 1 / -1; }
+
+/* 桌機：右側抽屜打開時，底部按鈕列與頂部列往左讓開 460px 抽屜 */
+@media (min-width: 821px) {
+  body.drawer-open .float-bottom-dock,
+  body.drawer-open .float-top-bar { right: 488px; }
+}
+
+@media (max-width: 820px) {
+  /* 手機導覽：抽屜只佔下方約六成，上方露出 3D 島；不透明底色，避免模糊效果拖慢 3D */
+  #side-drawer.tour-sheet {
+    top: 38vh;
+    top: 38dvh;
+    background: #FDF7EC;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 -10px 30px rgba(24, 24, 34, 0.28);
+  }
+  #side-drawer.tour-sheet.tour-sheet-full { top: 44px; }
+  #side-drawer.tour-sheet .drawer-expand { display: inline-flex; align-items: center; justify-content: center; }
+  #side-drawer.tour-sheet::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 44px;
+    height: 5px;
+    margin-left: -22px;
+    border-radius: 999px;
+    background: rgba(110, 90, 70, 0.32);
+    z-index: 1;
+  }
+}
+
+/* 導覽首頁 */
+.tour-welcome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #FFF7E2, #FFEBC6);
+  border: 2px solid #EBC074;
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+.tour-welcome-av {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #FFE5B5;
+  border: 2px solid var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+.tour-welcome-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tour-welcome strong { font-family: var(--font-display); font-size: 1.08rem; color: #7A3500; }
+.tour-welcome p { margin: 4px 0 0; font-size: 0.98rem; font-weight: 700; color: var(--ink-mid); line-height: 1.55; }
+.tour-h { font-size: 1.06rem; margin: 16px 0 8px; color: var(--ink-dark); }
+
+.tour-persona-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }   /* 一列一個，長輩看得清楚、字不會被擠斷 */
+.tour-persona-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 10px;
+  min-height: 66px;
+  border-radius: 16px;
+  background: #fff;
+  border: 2px solid var(--border-warm);
+  box-shadow: var(--shadow-soft);
+}
+.tour-persona-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.tour-persona-btn.active { border-color: var(--red); background: #FFF1EC; box-shadow: 0 0 0 3px rgba(223, 86, 70, 0.18); }
+.tour-persona-av {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.tour-persona-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tour-persona-txt strong { display: block; font-size: 0.98rem; font-weight: 900; line-height: 1.3; }
+.tour-persona-txt small { display: block; font-size: 0.84rem; font-weight: 700; color: var(--ink-soft); line-height: 1.35; margin-top: 2px; }
+
+.tour-route-box { margin-top: 12px; background: #fff; border: 2px solid var(--emerald); border-radius: 18px; padding: 14px; }
+.tour-route-title { display: block; font-family: var(--font-display); font-size: 1.08rem; color: var(--emerald-dark); }
+.tour-route-box p { margin: 6px 0 8px; font-size: 1rem; line-height: 1.65; color: var(--ink-mid); font-weight: 600; }
+.tour-route-steps { margin: 0 0 12px; padding-left: 28px; font-size: 1rem; font-weight: 800; line-height: 1.8; }
+.tour-start-btn { min-height: 54px; font-size: 1.05rem; }
+
+.tour-stop-list { display: flex; flex-direction: column; gap: 8px; }
+.tour-stop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid var(--border-warm);
+  border-left: 7px solid var(--fund-color);
+  text-align: left;
+}
+.tour-stop-pill {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--fund-color);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tour-stop-label { flex: 1; font-size: 1.02rem; font-weight: 900; }
+.tour-stop-state { font-size: 0.88rem; font-weight: 800; color: var(--ink-soft); white-space: nowrap; }
+.tour-stop-row.visited .tour-stop-state { color: var(--emerald-dark); }
+.tour-challenge-btn { margin-top: 16px; }
+.tour-disclaimer { margin: 14px 0 4px; font-size: 0.84rem; color: var(--ink-soft); font-weight: 600; line-height: 1.5; text-align: center; }
+
+/* 站卡 */
+.tour-stop { background: #fff; border: 2px solid var(--border-warm); border-top: 7px solid var(--fund-color); border-radius: 18px; padding: 14px; }
+.tour-hero { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.tour-hero-ico {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: var(--fund-color);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+.tour-hero-txt small { display: block; font-size: 0.92rem; font-weight: 900; color: var(--fund-color); }
+.tour-hero-txt h3 { font-size: 1.22rem; color: var(--ink-dark); }
+.tour-oneliner { margin: 6px 0 10px; font-size: 1.12rem; font-weight: 900; line-height: 1.6; color: var(--ink-dark); }
+.tour-persona-note {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #FFF4DD;
+  border: 1.5px solid #EBC074;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #6B3A00;
+  line-height: 1.55;
+}
+.tour-keynums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.tour-keynum { background: var(--bg-cream); border: 2px solid var(--fund-color); border-radius: 14px; padding: 8px 6px; text-align: center; }
+.tour-keynum small { display: block; font-size: 0.8rem; font-weight: 800; color: var(--ink-soft); line-height: 1.3; }
+.tour-keynum strong { display: block; font-family: var(--font-display); font-size: 1.15rem; font-weight: 900; color: var(--ink-dark); line-height: 1.3; margin-top: 2px; }
+@media (max-width: 359px) { .tour-keynums { grid-template-columns: 1fr; } }
+
+.tour-sec { margin-top: 12px; border-radius: 14px; padding: 10px 12px; background: #FFFDF8; border: 1.5px solid var(--border-warm); }
+.tour-sec h4 { font-size: 1.05rem; margin-bottom: 4px; }
+.tour-sec ul { margin: 0; padding-left: 22px; }
+.tour-sec li { font-size: 1rem; line-height: 1.65; margin-bottom: 6px; font-weight: 600; color: var(--ink-mid); }
+.tour-sec-suits { border-left: 6px solid var(--emerald); }
+.tour-sec-notfor { border-left: 6px solid var(--red); }
+.tour-sec-caution { border-left: 6px solid var(--amber); }
+
+.tour-story { margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 2px solid var(--border-warm); }
+.tour-story-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.tour-story-av { width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--fund-color); }
+.tour-story-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tour-story-head strong { display: block; font-size: 1.02rem; font-weight: 900; }
+.tour-story-head small { display: block; font-size: 0.88rem; font-weight: 700; color: var(--ink-soft); }
+.tour-story-line { margin: 4px 0; font-size: 1rem; line-height: 1.65; color: var(--ink-mid); }
+.tour-story-result { color: var(--ink-dark); font-weight: 700; }
+.tour-story-tip { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: #F2F8EC; font-size: 0.96rem; line-height: 1.55; color: #2D4A1E; font-weight: 700; }
+
+.tour-pairs { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.tour-pair-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid var(--fund-color);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tour-pair-btn strong { font-size: 1rem; font-weight: 900; color: var(--ink-dark); }
+.tour-pair-btn span { font-size: 0.95rem; line-height: 1.55; color: var(--ink-mid); font-weight: 600; }
+
+.tour-terms { margin-top: 12px; }
+.tour-terms summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-warm);
+  font-weight: 900;
+  font-size: 1rem;
+  text-align: center;
+}
+.tour-terms summary::-webkit-details-marker { display: none; }
+.tour-terms[open] summary { margin-bottom: 10px; }
+.tour-quote {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-left: 5px solid var(--fund-color);
+  background: var(--bg-cream);
+  border-radius: 0 12px 12px 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  font-weight: 700;
+}
+.tour-quote cite { display: block; margin-top: 4px; font-style: normal; font-size: 0.84rem; color: var(--ink-soft); font-weight: 700; }
+.tour-wip {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #FFF4DD;
+  border: 1.5px dashed #EBC074;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #6B3A00;
+}
+
+/* 底部：← 上一站｜n／N 清單｜下一站 → */
+.tour-nav { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: stretch; }
+.tour-nav-btn { min-height: 52px; border-radius: 14px; background: #fff; border: 2px solid var(--border-warm); font-weight: 900; font-size: 1rem; }
+.tour-nav-next { background: linear-gradient(135deg, var(--red), #EB6A4B); color: #fff; border-color: transparent; box-shadow: 0 3px 0 var(--red-dark); }
+.tour-nav-mid {
+  min-width: 76px;
+  min-height: 52px;
+  border-radius: 14px;
+  background: var(--bg-warm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+}
+.tour-nav-mid strong { font-family: var(--font-display); font-size: 1.08rem; line-height: 1.15; }
+.tour-nav-mid small { font-size: 0.8rem; font-weight: 800; color: var(--ink-soft); white-space: nowrap; }
+
+/* 逛完一條路線 */
+.tour-done { text-align: center; padding: 6px 4px; }
+.tour-done-badge { font-size: 3rem; line-height: 1; margin: 6px 0; }
+.tour-done h3 { font-size: 1.25rem; margin-bottom: 6px; }
+.tour-done p { font-size: 1rem; line-height: 1.65; color: var(--ink-mid); font-weight: 700; }
+.tour-done-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+/* 挑戰區上方說明 */
+.challenge-intro { background: #FFF7E2; border: 2px solid #EBC074; border-radius: 16px; padding: 10px 12px; margin-bottom: 12px; }
+.challenge-intro p { margin: 0 0 8px; font-size: 0.95rem; font-weight: 700; color: #6B3A00; line-height: 1.55; }
+.challenge-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.challenge-intro-actions .btn-secondary { flex: 1 1 auto; min-height: 44px; }
+
+/* 計畫／方案一次看 */
+.tour-plan-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.tour-plan-row { background: #fff; border: 1.5px solid var(--border-warm); border-left: 5px solid var(--fund-color); border-radius: 12px; padding: 8px 10px; }
+.tour-plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.tour-plan-head strong { font-family: var(--font-display); font-size: 1.05rem; color: var(--ink-dark); }
+.tour-plan-head span { font-size: 0.95rem; font-weight: 900; color: var(--fund-color); white-space: nowrap; }
+.tour-plan-row p { margin: 3px 0 0; font-size: 0.96rem; line-height: 1.55; color: var(--ink-mid); font-weight: 600; }
+.tour-plan-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--ink-soft); font-weight: 700; line-height: 1.5; }
+
+/* 查基金：關鍵字按鈕與搜尋結果 */
+.tour-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tour-chip {
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--border-warm);
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: var(--ink-dark);
+}
+.tour-chip.active { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+.tour-search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+.tour-search-box .search-input { flex: 1; min-width: 0; font-size: 1rem; }
+.tour-search-box .btn-primary { flex-shrink: 0; min-width: 64px; }
+.tour-result-list { display: flex; flex-direction: column; gap: 8px; }
+.tour-result-row {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid var(--border-warm);
+  border-left: 7px solid var(--fund-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tour-result-row strong { display: flex; align-items: center; gap: 8px; font-size: 1.02rem; font-weight: 900; color: var(--ink-dark); }
+.tour-result-row .tour-stop-pill { width: 28px; height: 28px; font-size: 0.92rem; }
+.tour-result-row span { font-size: 0.95rem; line-height: 1.55; color: var(--ink-mid); font-weight: 600; }
+.tour-result-row mark { background: #FFE38A; color: inherit; padding: 0 2px; border-radius: 4px; }
+.tour-empty { margin: 14px 0; padding: 12px; border-radius: 12px; background: var(--bg-cream); font-size: 0.98rem; font-weight: 700; color: var(--ink-mid); text-align: center; }
+.tour-search-more { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+/* 路線卡彈窗 */
+.share-btn-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 12px; }

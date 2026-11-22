@@ -1,12 +1,12 @@
 /* ==========================================================================
-   儲互社互助島 — 全螢幕 3D 微縮世界 × 精簡浮動 HUD × 島嶼進度連動控制器 (v14)
+   儲互社互助島 — 全螢幕 3D 微縮世界 × 導覽主線（v16）× 挑戰區小遊戲 × 島嶼進度連動控制器
    ========================================================================== */
 window.APP = (function () {
   let currentDiff = 'easy';
   let activeBoothId = null;
   let quoteIdx = 0;
-  let newbieDismissed = false;
   let pendingFirework = null;
+  let fallbackMsg = '';
 
   const GAME_MODULES = {
     game1: () => window.GAME_SWIPE,
@@ -14,13 +14,6 @@ window.APP = (function () {
     game3: () => window.GAME_DETECTIVE,
     game4: () => window.GAME_LIFE85,
     game5: () => window.GAME_CALENDAR
-  };
-
-  const STAGE_NOTES = {
-    kids: '👶 0~15歲成長線：團體 E 計畫($812)＋出生即可保防癌＋滿 6 月 LS 股金 100% 加值！',
-    adult: '🧑 青壯成家線：45 歲前限定 D 計畫＋LP 貸款安全免費護身＋團體意外大眾運輸加倍＋重疾 7 項！',
-    officer: '🎖️ 理監事幹部線：全體同選 A1/A2/A3、教委上限 5 人／顧問 3 人、3/1 開保、11/25 受理截止！',
-    senior: '🌻 70~85歲銀髮線：松年意外續至 85 歲含實支實付＋防癌計畫三續至 75 歲＋75 歲前 LS 終身有效！'
   };
 
   const FUND_TO_GAME = {
@@ -62,28 +55,27 @@ window.APP = (function () {
 
   function syncIslandAndHud() {
     const progress = window.STORAGE.getIslandProgress();
-    const badge = document.getElementById('header-star-badge');
-    if (badge) {
-      badge.textContent = progress.hardBadges > 0
-        ? `${progress.totalStars}/15 ★`
-        : `${progress.totalStars}/15`;
-    }
+    const tour = window.STORAGE.getTour();
+    const tourProg = window.TOUR ? window.TOUR.getProgress() : { visited: 0, total: 8 };
 
-    // Highlight primary CTA when player hasn't collected stars yet
-    const boothBtn = document.getElementById('btn-open-booths');
-    boothBtn?.classList.toggle('dock-pulse', progress.totalStars === 0);
+    // 底部「🧭 導覽」按鈕：已逛幾站；還沒逛過任何一站時閃動提示
+    const tourBadge = document.getElementById('tour-progress-badge');
+    if (tourBadge) tourBadge.textContent = `${tourProg.visited}/${tourProg.total}`;
+    document.getElementById('btn-tour')?.classList.toggle('dock-pulse', tourProg.visited === 0);
 
-    // Show/Hide newbie onboarding card cleanly
+    // 新手引導泡泡：沒逛過、沒關掉、抽屜與片頭都沒開時才出現
     const guide = document.getElementById('newbie-guide-card');
     const drawerOpen = !document.getElementById('side-drawer')?.classList.contains('hidden');
     const introOpen = !document.getElementById('modal-intro-video')?.classList.contains('hidden');
     if (guide) {
-      const shouldShow = progress.totalStars === 0 && !newbieDismissed && !drawerOpen && !introOpen;
+      const shouldShow = tourProg.visited === 0 && !tour.guideDismissed && !drawerOpen && !introOpen;
       guide.classList.toggle('hidden', !shouldShow);
     }
 
-    // Push live progress to 3D Island (updates stars on labels, beacons, hot-air balloons!)
+    // 3D 島：挑戰區星等與熱氣球、導覽站號與已逛紀錄
     window.ISLAND_3D && window.ISLAND_3D.syncProgress && window.ISLAND_3D.syncProgress(progress);
+    window.TOUR && window.TOUR.syncIsland();
+    if (fallbackMsg) renderFallbackGrid();
   }
 
   function closeScenePopover() {
@@ -92,11 +84,13 @@ window.APP = (function () {
     pop?.classList.add('hidden');
     btn?.setAttribute('aria-expanded', 'false');
     btn?.classList.remove('active');
+    document.querySelector('.float-top-bar')?.classList.remove('popover-open');
   }
 
   function closeDrawer(triggerCelebration = false) {
     cleanupActiveBooth();
     activeBoothId = null;
+    window.TOUR && window.TOUR.reset();
     document.getElementById('side-drawer')?.classList.add('hidden');
     document.getElementById('drawer-explore')?.classList.add('hidden');
     document.getElementById('drawer-game')?.classList.add('hidden');
@@ -117,10 +111,12 @@ window.APP = (function () {
     }
   }
 
-  function showExploreDrawer(title, sub, html) {
+  // opts.tour = true：導覽畫面自己管理半高抽屜與底部列；其他畫面一律先清掉導覽狀態
+  function showExploreDrawer(title, sub, html, opts = {}) {
     closeScenePopover();
     cleanupActiveBooth();
     activeBoothId = null;
+    if (!opts.tour && window.TOUR) window.TOUR.reset();
     document.getElementById('drawer-game')?.classList.add('hidden');
     document.getElementById('drawer-explore')?.classList.remove('hidden');
     document.getElementById('side-drawer')?.classList.remove('hidden');
@@ -139,6 +135,13 @@ window.APP = (function () {
     const prog = window.STORAGE.getIslandProgress(state);
     const mascotImg = window.ASSETS_MANIFEST.getImageUrl('mascot_host');
     const html = `
+      <div class="challenge-intro">
+        <p>這裡是給幹部訓練、園遊會攤位用的 5 個小遊戲。想先弄懂每個互助基金，請回「🧭 導覽」。</p>
+        <div class="challenge-intro-actions">
+          <button type="button" class="btn-secondary" data-challenge-tour>🧭 回導覽</button>
+          <button type="button" class="btn-secondary" data-challenge-passport>🏅 集章護照・戰績卡（${prog.totalStars}/15 ★）</button>
+        </div>
+      </div>
       <div class="drawer-diff-bar" role="group" aria-label="選擇遊玩難度">
         <button type="button" class="drawer-diff-btn ${currentDiff === 'easy' ? 'active-easy' : ''}" data-drawer-diff="easy">
           <strong>🌱 輕鬆安心版</strong>
@@ -186,12 +189,20 @@ window.APP = (function () {
       </p>
     `;
     showExploreDrawer(
-      '🎪 五大嘉年華挑戰攤位',
+      '🎮 挑戰區｜5 個小遊戲',
       currentDiff === 'hard'
         ? '🔥 幹部魔王版：計時＋實務精算，達 2★ 拿魔王赤章！'
         : '🌱 輕鬆安心版：不限時、5 題輕量、每題免費附白話提示！',
       html
     );
+    document.querySelector('#explore-body [data-challenge-tour]')?.addEventListener('click', () => {
+      window.SOUND.click();
+      window.TOUR.openHome();
+    });
+    document.querySelector('#explore-body [data-challenge-passport]')?.addEventListener('click', () => {
+      window.SOUND.click();
+      openPassport();
+    });
     document.querySelectorAll('#explore-body [data-drawer-diff]').forEach(btn => {
       btn.addEventListener('click', () => {
         const target = btn.dataset.drawerDiff;
@@ -213,56 +224,14 @@ window.APP = (function () {
     });
   }
 
+  // 點 3D 基金地標 → 打開導覽站卡（v16 起由 TOUR 負責）
   function openFundCard(fundId) {
-    window.SOUND.ensureBgm();
-    const f = window.FUNDS_DATA.find(x => x.id === fundId);
-    if (!f) return;
-    const relGameId = FUND_TO_GAME[fundId] || 'game2';
-    const relGame = window.BOOTHS_META.find(b => b.id === relGameId);
-
-    const html = `
-      <article class="fund-doc-card" style="--fund-color:${f.color}">
-        <span class="fund-period-pill">📄 ${f.sourcePdf}</span>
-        <p style="margin:0 0 12px;font-weight:700;color:#1E1510;">${f.summary}</p>
-        <div class="fund-kv-grid">
-          <div class="fund-kv"><strong>📅 保障期間</strong>${f.period}</div>
-          <div class="fund-kv"><strong>⏰ 送件／受理期限</strong>${f.deadline}</div>
-          <div class="fund-kv"><strong>🎂 年齡與資格</strong>${f.ageRule}</div>
-        </div>
-        ${f.plansTable ? `
-          <div style="overflow-x:auto;">
-            <table class="fund-table">
-              <thead><tr>${f.plansTable.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-              <tbody>${f.plansTable.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
-            </table>
-          </div>
-        ` : ''}
-        <ul class="fund-highlights">
-          ${f.highlights.map(h => `<li>${h}</li>`).join('')}
-        </ul>
-      </article>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button id="btn-fund-play-rel" class="btn-primary btn-full">🎮 挑戰相關攤位：${relGame.icon} ${relGame.shortTitle}</button>
-        <button id="btn-fund-all-hb" class="btn-secondary btn-full">📖 查看完整 8 大基金速查圖鑑</button>
-      </div>
-    `;
-
-    showExploreDrawer(`${f.icon} ${f.name}`, '3D 基金地標詳情 ‧ 18px 特大字速覽', html);
-    document.getElementById('btn-fund-play-rel')?.addEventListener('click', () => {
-      window.SOUND.click();
-      openBooth(relGameId);
-    });
-    document.getElementById('btn-fund-all-hb')?.addEventListener('click', () => {
-      window.SOUND.click();
-      window.HANDBOOK.open(fundId);
-    });
+    window.TOUR.openStop(fundId);
   }
 
+  // 點中央「導覽起點」→ 導覽首頁
   function openHubInfo() {
-    window.SOUND.ensureBgm();
-    window.SOUND.playVoice('welcome');
-    quoteIdx = (quoteIdx + 1) % window.GAME_CONTENT.mascotQuotes.length;
-    openBoothsList();
+    window.TOUR.openHome();
   }
 
   function cleanupActiveBooth() {
@@ -292,6 +261,7 @@ window.APP = (function () {
 
     closeScenePopover();
     cleanupActiveBooth();
+    window.TOUR && window.TOUR.reset();
     activeBoothId = boothId;
     window.SOUND.ensureBgm();
     window.SOUND.playVoice(`booth_${boothId}`);
@@ -435,44 +405,69 @@ window.APP = (function () {
     document.getElementById('modal-passport')?.classList.remove('hidden');
   }
 
+  // 沒有 3D（file:// 或 WebGL／CDN 失敗）：列出 8 站＋導覽首頁＋挑戰區
+  function renderFallbackGrid() {
+    const grid = document.getElementById('fb2d-booths');
+    if (!grid || !window.TOUR_CONTENT) return;
+    const visited = window.STORAGE.getTour().visited || [];
+    grid.innerHTML = `
+      <button type="button" class="booth-card fb2d-wide" style="--booth-color:#21805F;text-align:center;" data-fb-home>
+        <strong style="font-size:1rem;">🧭 互助島導覽首頁（選你是誰）</strong>
+      </button>
+      ${window.TOUR_CONTENT.order.map((id, i) => {
+        const f = window.FUNDS_DATA.find(x => x.id === id);
+        if (!f) return '';
+        return `
+          <button type="button" class="booth-card" style="--booth-color:${f.color};text-align:center;" data-fb-stop="${id}">
+            <div style="font-size:1.8rem;">${f.icon}</div>
+            <strong style="font-size:0.96rem;">${i + 1}. ${f.shortName}${visited.includes(id) ? ' ✅' : ''}</strong>
+          </button>`;
+      }).join('')}
+      <button type="button" class="booth-card fb2d-wide" style="--booth-color:#DF5646;text-align:center;" data-fb-challenge>
+        <strong style="font-size:1rem;">🎮 挑戰區：5 個小遊戲</strong>
+      </button>
+    `;
+    grid.querySelector('[data-fb-home]')?.addEventListener('click', () => { window.SOUND.click(); window.TOUR.openHome(); });
+    grid.querySelectorAll('[data-fb-stop]').forEach(btn => {
+      btn.addEventListener('click', () => { window.SOUND.click(); window.TOUR.openStop(btn.dataset.fbStop); });
+    });
+    grid.querySelector('[data-fb-challenge]')?.addEventListener('click', () => { window.SOUND.click(); openBoothsList(); });
+  }
+
   function show2DFallback(msg) {
     const fb = document.getElementById('fallback-2d-world');
     if (!fb) return;
-    document.getElementById('fb2d-msg').textContent = msg;
-    const grid = document.getElementById('fb2d-booths');
-    grid.innerHTML = window.BOOTHS_META.map(b => `
-      <button class="booth-card" style="--booth-color:${b.color};text-align:center;" data-open-booth="${b.id}">
-        <div style="font-size:2rem;">${b.icon}</div>
-        <strong style="font-size:0.96rem;">${b.shortTitle}</strong>
-      </button>
-    `).join('');
-    grid.querySelectorAll('[data-open-booth]').forEach(btn => {
-      btn.addEventListener('click', () => openBooth(btn.dataset.openBooth));
-    });
+    fallbackMsg = msg || '2D 模式';
+    document.getElementById('fb2d-msg').textContent = fallbackMsg;
+    renderFallbackGrid();
     fb.classList.remove('hidden');
   }
 
+  // 「我是誰」身分路線（導覽首頁大按鈕、島景彈窗、桌機底部按鈕都走這裡）
   function setStageFilterUI(stageKey) {
+    const key = window.TOUR_CONTENT && window.TOUR_CONTENT.personas[stageKey] ? stageKey : 'all';
     document.querySelectorAll('.stage-chip').forEach(ch => {
-      ch.classList.toggle('active', ch.dataset.stage === stageKey);
+      const on = ch.dataset.stage === key;
+      ch.classList.toggle('active', on);
+      ch.setAttribute('aria-pressed', String(on));
     });
-    window.ISLAND_3D && window.ISLAND_3D.setStageFilter(stageKey);
+    const persona = window.TOUR ? window.TOUR.setPersona(key) : null;
     const banner = document.getElementById('synergy-banner');
     const txt = document.getElementById('synergy-banner-text');
-    if (stageKey === 'all') {
+    if (key === 'all' || !persona || !persona.banner) {
       banner?.classList.add('hidden');
-    } else if (STAGE_NOTES[stageKey]) {
-      txt.textContent = STAGE_NOTES[stageKey];
+    } else {
+      txt.textContent = persona.banner;
       banner?.classList.remove('hidden');
     }
   }
 
   function bindGlobalEvents() {
+    // 左上品牌：關抽屜、回全景（身分路線保留，要清掉按提示列的 ✕）
     document.getElementById('btn-home')?.addEventListener('click', () => {
       window.SOUND.click();
       closeScenePopover();
       closeDrawer(false);
-      setStageFilterUI('all');
       window.ISLAND_3D && window.ISLAND_3D.resetCamera();
     });
 
@@ -486,6 +481,8 @@ window.APP = (function () {
       scenePop?.classList.toggle('hidden', !willOpen);
       sceneBtn.setAttribute('aria-expanded', String(Boolean(willOpen)));
       sceneBtn.classList.toggle('active', Boolean(willOpen));
+      // 彈窗打開時把頂部列疊到導覽抽屜上面，不然手機半高抽屜會蓋住彈窗
+      document.querySelector('.float-top-bar')?.classList.toggle('popover-open', Boolean(willOpen));
     });
     document.addEventListener('click', (e) => {
       if (scenePop && !scenePop.classList.contains('hidden')) {
@@ -495,18 +492,22 @@ window.APP = (function () {
       }
     });
 
-    // Newbie Guide Quick-Start
+    // 新手引導泡泡 → 導覽首頁；✕ 關掉後記住，不再出現
     document.getElementById('btn-newbie-go')?.addEventListener('click', () => {
       window.SOUND.click();
       window.SOUND.ensureBgm();
-      newbieDismissed = true;
-      window.ISLAND_3D && window.ISLAND_3D.focusById('game1');
-      openBooth('game1');
+      window.TOUR.openHome();
     });
     document.getElementById('btn-newbie-close')?.addEventListener('click', () => {
       window.SOUND.click();
-      newbieDismissed = true;
+      window.STORAGE.dismissGuide();
       document.getElementById('newbie-guide-card')?.classList.add('hidden');
+    });
+
+    document.getElementById('btn-tour')?.addEventListener('click', () => {
+      window.SOUND.click();
+      window.SOUND.ensureBgm();
+      window.TOUR.openHome();
     });
 
     document.getElementById('btn-open-booths')?.addEventListener('click', () => {
@@ -577,10 +578,11 @@ window.APP = (function () {
       requestSwitchDiff(currentDiff === 'easy' ? 'hard' : 'easy');
     });
 
+    // 底部「🔍 查基金」：導覽的關鍵字搜尋（裡面也能打開完整條款圖鑑）
     document.getElementById('btn-handbook')?.addEventListener('click', () => {
       window.SOUND.click();
       closeScenePopover();
-      window.HANDBOOK.open('all');
+      window.TOUR.openSearch();
     });
     document.getElementById('btn-passport')?.addEventListener('click', () => {
       window.SOUND.click();
@@ -619,7 +621,17 @@ window.APP = (function () {
     document.getElementById('btn-play-intro')?.addEventListener('click', () => {
       window.SOUND.click();
       closeScenePopover();
-      openIntroVideo(false);
+      openIntroVideo();
+    });
+
+    // 開場短片：點大按鈕開聲音；用影片自帶的喇叭鈕開聲音也一樣先停背景音樂
+    document.getElementById('btn-intro-unmute')?.addEventListener('click', unmuteIntroVideo);
+    document.getElementById('intro-video-el')?.addEventListener('volumechange', (e) => {
+      const vid = e.currentTarget;
+      if (!vid.muted && !document.getElementById('modal-intro-video')?.classList.contains('hidden')) {
+        window.SOUND.pauseBgmForVideo();
+        document.getElementById('btn-intro-unmute')?.classList.add('hidden');
+      }
     });
 
     document.getElementById('btn-audio')?.addEventListener('click', (e) => {
@@ -711,9 +723,8 @@ window.APP = (function () {
     });
 
     document.getElementById('btn-reset-progress')?.addEventListener('click', () => {
-      if (confirm('確定要清除所有攤位星等、魔王章與集章紀錄嗎？')) {
+      if (confirm('確定要清除所有攤位星等、魔王章與集章紀錄嗎？（導覽逛過的紀錄會保留）')) {
         window.STORAGE.resetAll();
-        newbieDismissed = false;
         syncIslandAndHud();
         openPassport();
         toast('🗑️ 已重設集章紀錄');
@@ -721,8 +732,89 @@ window.APP = (function () {
     });
   }
 
+  /* ---------- 手機返回鍵：抽屜或彈窗打開時記一筆，返回鍵依序關彈窗 → 抽屜，不會直接離開網站 ---------- */
+  const LAYER_IDS = ['side-drawer', 'modal-handbook', 'modal-passport', 'modal-route-card', 'modal-result'];
+  let historyArmed = false;
+  let ignoreNextPop = false;
+
+  function isShown(id) {
+    const el = document.getElementById(id);
+    return Boolean(el && !el.classList.contains('hidden'));
+  }
+
+  function anyLayerOpen() {
+    return LAYER_IDS.some(isShown);
+  }
+
+  function armHistory() {
+    if (historyArmed) return;
+    try {
+      history.pushState({ cuLayer: true }, '');
+      historyArmed = true;
+    } catch {
+      historyArmed = false;
+    }
+  }
+
+  // 由畫面按鈕關掉最後一層時，把剛才記的那一筆退掉，讓返回鍵的次數對得上
+  function syncHistoryWithLayers() {
+    const open = anyLayerOpen();
+    if (open && !historyArmed) {
+      armHistory();
+    } else if (!open && historyArmed) {
+      historyArmed = false;
+      ignoreNextPop = true;
+      try { history.back(); } catch { ignoreNextPop = false; }
+    }
+  }
+
+  // 關最上面一層；遊戲還沒玩完先確認（回傳 false 表示使用者選擇繼續玩）
+  function closeTopLayer() {
+    for (const id of ['modal-handbook', 'modal-passport', 'modal-route-card']) {
+      if (isShown(id)) {
+        document.getElementById(id).classList.add('hidden');
+        return true;
+      }
+    }
+    if (isShown('side-drawer')) {
+      const resultOpen = isShown('modal-result');
+      if (activeBoothId && !resultOpen && !confirm('遊戲還沒玩完，確定要回到島上嗎？')) return false;
+      closeDrawer(resultOpen);
+      return true;
+    }
+    if (isShown('modal-result')) {
+      document.getElementById('modal-result').classList.add('hidden');
+      return true;
+    }
+    return false;
+  }
+
+  function bindBackButton() {
+    window.addEventListener('popstate', () => {
+      if (ignoreNextPop) { ignoreNextPop = false; return; }
+      if (!historyArmed) return;
+      historyArmed = false;            // 瀏覽器已經把我們記的那一筆退掉了
+      const closed = closeTopLayer();
+      if (!closed || anyLayerOpen()) armHistory();
+    });
+    // 抽屜開著時在 body 標記（桌機把底部按鈕列、頂部列往左讓開，不被抽屜蓋住）
+    const observer = new MutationObserver(() => {
+      document.body.classList.toggle('drawer-open', isShown('side-drawer'));
+      syncHistoryWithLayers();
+    });
+    LAYER_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+    // 桌機 Esc 一樣關最上面一層
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && anyLayerOpen()) closeTopLayer();
+    });
+  }
+
   function closeIntroVideo(startMusic = true) {
     document.getElementById('modal-intro-video')?.classList.add('hidden');
+    document.getElementById('btn-intro-unmute')?.classList.add('hidden');
     const vid = document.getElementById('intro-video-el');
     if (vid) {
       vid.pause();
@@ -731,39 +823,76 @@ window.APP = (function () {
     if (startMusic) {
       window.SOUND.resumeBgmAfterVideo();
       window.SOUND.ensureBgm();
+    } else {
+      window.SOUND.releaseVideoHold();
     }
     syncIslandAndHud();
   }
 
-  function openIntroVideo(autoMuted = true) {
+  function showIntroUnmute(label) {
+    const btn = document.getElementById('btn-intro-unmute');
+    if (!btn || !window.SOUND.isEnabled()) return;
+    btn.textContent = label;
+    btn.classList.remove('hidden');
+  }
+
+  // 開場短片預設有聲音：先試有聲自動播放；瀏覽器擋下（手機、LINE 幾乎都會擋）
+  // 就改靜音播放，並在影片上顯示大顆「點一下開聲音」，點了從頭有聲重播
+  function openIntroVideo() {
     if (!window.ASSETS_MANIFEST.detected.videos.intro) {
       toast('尚未放入開場短片 assets/videos/intro_carnival.mp4');
       return;
     }
     const modal = document.getElementById('modal-intro-video');
     const vid = document.getElementById('intro-video-el');
-    if (modal && vid) {
-      if (!autoMuted) window.SOUND.pauseBgmForVideo();
-      vid.src = window.ASSETS_MANIFEST.videos.intro;
-      vid.muted = autoMuted;
-      vid.currentTime = 0;
-      vid.onended = () => closeIntroVideo(!autoMuted);
-      modal.classList.remove('hidden');
-      document.getElementById('newbie-guide-card')?.classList.add('hidden');
-      vid.play().catch(() => {});
+    if (!modal || !vid) return;
+    document.getElementById('btn-intro-unmute')?.classList.add('hidden');
+    vid.src = window.ASSETS_MANIFEST.videos.intro;
+    vid.currentTime = 0;
+    vid.onended = () => closeIntroVideo(!vid.muted);
+    modal.classList.remove('hidden');
+    document.getElementById('newbie-guide-card')?.classList.add('hidden');
+
+    const playMuted = () => {
+      vid.muted = true;
+      vid.play()
+        .then(() => showIntroUnmute('🔊 點一下開聲音'))
+        .catch(() => showIntroUnmute('▶ 點一下播放（有聲音）'));
+    };
+    if (!window.SOUND.isEnabled()) {
+      playMuted();
+      return;
     }
+    vid.muted = false;
+    vid.play()
+      .then(() => window.SOUND.pauseBgmForVideo())
+      .catch(playMuted);
+  }
+
+  function unmuteIntroVideo() {
+    const vid = document.getElementById('intro-video-el');
+    if (!vid) return;
+    window.SOUND.pauseBgmForVideo();
+    vid.muted = false;
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+    document.getElementById('btn-intro-unmute')?.classList.add('hidden');
   }
 
   function init() {
     window.HANDBOOK.init();
     bindGlobalEvents();
+    bindBackButton();
+    // 還原上次選的身分路線（按鈕亮起＋提示列；3D 島準備好後由 TOUR.onIslandReady 補上高亮）
+    setStageFilterUI(window.STORAGE.getTour().persona);
     syncIslandAndHud();
     if (window.location.protocol === 'file:') {
       show2DFallback('離線 2D 模式（雙擊 start_game.bat 或放上網站即可開啟全螢幕 3D 互助島！）');
     }
     window.ASSETS_MANIFEST.scanAll().then((det) => {
+      window.TOUR && window.TOUR.refresh();   // 角色圖到位後重畫導覽畫面
       if (det && det.videos && det.videos.intro) {
-        openIntroVideo(true);
+        openIntroVideo();
       } else {
         syncIslandAndHud();
       }
@@ -774,6 +903,7 @@ window.APP = (function () {
 
   return {
     openBooth,
+    openBoothsList,
     openFundCard,
     openHubInfo,
     goLobby: () => closeDrawer(false),
@@ -781,6 +911,9 @@ window.APP = (function () {
     toast,
     setBottomBar,
     show2DFallback,
-    syncIslandAndHud
+    showExploreDrawer,
+    setStageFilterUI,
+    syncIslandAndHud,
+    FUND_TO_GAME
   };
 })();

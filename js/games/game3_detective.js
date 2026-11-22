@@ -21,7 +21,8 @@ window.GAME_DETECTIVE = (function () {
       : [];
 
     const pickedStatic = shuffle(staticPool).slice(0, isHard ? 4 : 3);
-    const deck = shuffle([...pickedStatic, ...dynamicCases.slice(0, isHard ? 2 : 1)]);
+    // 動態題先洗牌再取，魔王版的 LS 退股題才有機會出現
+    const deck = shuffle([...pickedStatic, ...shuffle(dynamicCases).slice(0, isHard ? 2 : 1)]);
 
     let idx = 0;
     let score = 0;

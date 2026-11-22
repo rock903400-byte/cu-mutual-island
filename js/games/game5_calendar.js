@@ -71,7 +71,7 @@ window.GAME_CALENDAR = (function () {
             </button>
             <div id="mnemonic-card" class="mnemonic-card ${showMnemonic ? '' : 'hidden'}">
               <strong>📌 順口溜：</strong>「<strong>3</strong> 幹部、<strong>4</strong> 團體、<strong>6</strong> 防癌、<strong>8</strong> 重疾、<strong>9</strong> 意外、<strong>10</strong> 松年」<br/>
-              <strong>⏰ 25 號鐵律：</strong>當月 25 日(含)前送達協會 → 次月 1 日生效；超過 25 日順延 1 個月！
+              <strong>⏰ 25 號鐵律：</strong>當月 25 日前送達協會 → 次月 1 日生效；超過 25 日順延 1 個月！
             </div>
           </div>
         ` : ''}

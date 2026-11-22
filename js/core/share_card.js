@@ -350,5 +350,218 @@ window.SHARE_CARD = (function () {
     return 'downloaded';
   }
 
-  return { GAME_URL, render, download, shareToLine };
+  /* ==========================================================================
+     v16 我的互助島路線卡（導覽用，不計分）。護照戰績卡的 render() 維持原樣不動。
+     ========================================================================== */
+  const FONT_DISPLAY = '"Zen Maru Gothic", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+  const FONT_BODY = '"Noto Sans TC", "Microsoft JhengHei", sans-serif';
+
+  function paintFrame(ctx, W, H, title, subtitle) {
+    ctx.fillStyle = '#FDF7EC';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(33,128,95,0.055)';
+    for (let y = 40; y < H; y += 44) {
+      for (let x = 40; x < W; x += 44) {
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.strokeStyle = '#21805F';
+    ctx.lineWidth = 10;
+    drawRoundRect(ctx, 24, 24, W - 48, H - 48, 36);
+    ctx.stroke();
+    ctx.strokeStyle = '#F2AD34';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 8]);
+    drawRoundRect(ctx, 42, 42, W - 84, H - 84, 28);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const flagColors = ['#21805F', '#F2AD34', '#3969A2', '#DF5646', '#6C8B3E'];
+    for (let i = 0; i < 12; i++) {
+      const fx = 62 + i * 65;
+      ctx.fillStyle = flagColors[i % flagColors.length];
+      ctx.beginPath();
+      ctx.moveTo(fx, 44);
+      ctx.lineTo(fx + 56, 44);
+      ctx.lineTo(fx + 28, 98);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#156046';
+    ctx.font = `900 46px ${FONT_DISPLAY}`;
+    ctx.fillText(title, W / 2, 166);
+    ctx.fillStyle = '#5C4B42';
+    ctx.font = `700 23px ${FONT_BODY}`;
+    ctx.fillText(subtitle, W / 2, 204);
+  }
+
+  function fitText(ctx, text, maxWidth) {
+    const str = String(text || '');
+    if (ctx.measureText(str).width <= maxWidth) return str;
+    let lo = 0;
+    let hi = str.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (ctx.measureText(str.slice(0, mid) + '…').width <= maxWidth) lo = mid;
+      else hi = mid - 1;
+    }
+    return str.slice(0, lo) + '…';
+  }
+
+  function paintRouteCard(canvas, data) {
+    canvas.width = 900;
+    canvas.height = 1200;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const state = window.STORAGE.load();
+    const route = data.route || [];
+    const visited = data.visited || [];
+    const doneInRoute = route.filter(id => visited.includes(id)).length;
+
+    paintFrame(ctx, W, H, '🏝️ 儲互社互助島', '8 大互助基金白話導覽 ‧ 我的路線卡');
+
+    // 逛島的人＋身分路線
+    ctx.fillStyle = '#FFFDF8';
+    drawRoundRect(ctx, 74, 228, W - 148, 160, 26);
+    ctx.fill();
+    ctx.strokeStyle = '#B8DCC9';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#156046';
+    ctx.font = `700 21px ${FONT_BODY}`;
+    ctx.fillText('逛島的人／儲互社名', W / 2, 264);
+    ctx.fillStyle = '#2C221E';
+    ctx.font = `900 40px ${FONT_DISPLAY}`;
+    ctx.fillText(fitText(ctx, state.nickname, W - 220), W / 2, 314);
+    ctx.fillStyle = '#21805F';
+    drawRoundRect(ctx, 195, 334, W - 390, 44, 22);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `900 24px ${FONT_DISPLAY}`;
+    ctx.fillText(`${data.persona.icon} ${data.persona.label}路線`, W / 2, 365);
+
+    // 路線上的每一站
+    ctx.fillStyle = '#2C221E';
+    ctx.font = `900 25px ${FONT_DISPLAY}`;
+    ctx.fillText(`— 我的路線：已逛 ${doneInRoute}／${route.length} 站 —`, W / 2, 430);
+
+    route.slice(0, 8).forEach((id, i) => {
+      const f = (data.funds || []).find(x => x.id === id);
+      if (!f) return;
+      const stop = data.stops ? data.stops[id] : null;
+      const isDone = visited.includes(id);
+      const y = 452 + i * 62;
+      ctx.fillStyle = isDone ? '#FFFFFF' : '#F4EEE2';
+      drawRoundRect(ctx, 74, y, W - 148, 54, 14);
+      ctx.fill();
+      ctx.strokeStyle = isDone ? f.color : '#D8C8B0';
+      ctx.lineWidth = isDone ? 3 : 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(106, y + 27, 19, 0, Math.PI * 2);
+      ctx.fillStyle = f.color;
+      ctx.fill();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `900 21px ${FONT_DISPLAY}`;
+      ctx.fillText(String(data.stopNo ? data.stopNo(id) : i + 1), 106, y + 34);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#1E1510';
+      ctx.font = `900 21px ${FONT_BODY}`;
+      ctx.fillText(`${f.icon} ${f.shortName}`, 138, y + 23);
+      ctx.fillStyle = '#5C4B42';
+      ctx.font = `500 16px ${FONT_BODY}`;
+      ctx.fillText(fitText(ctx, stop ? stop.oneLiner : f.summary, 560), 138, y + 45);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = isDone ? '#21805F' : '#9C8A7C';
+      ctx.font = `900 19px ${FONT_BODY}`;
+      ctx.fillText(isDone ? '✅ 已逛' : '○ 還沒逛', W - 92, y + 34);
+    });
+
+    // QR code 與網址（同戰績卡）
+    const fy = 972;
+    ctx.fillStyle = '#FFFDF8';
+    drawRoundRect(ctx, 74, fy, W - 148, 162, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#E2CDAF';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    drawQrCode(ctx, 94, fy + 15, 132);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#156046';
+    ctx.font = `900 28px ${FONT_DISPLAY}`;
+    ctx.fillText('📱 掃碼一起逛互助島！', 248, fy + 52);
+    ctx.fillStyle = '#2C221E';
+    ctx.font = `700 20px ${FONT_BODY}`;
+    ctx.fillText(`🌐 ${SHORT_URL}`, 248, fy + 88);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+    ctx.fillStyle = '#6C594D';
+    ctx.font = `700 18px ${FONT_BODY}`;
+    ctx.fillText(`📅 ${dateStr} ｜ 全島 8 站已逛 ${visited.length}／${data.total || 8} 站`, 248, fy + 120);
+    ctx.fillStyle = '#8B766A';
+    ctx.font = `500 15px ${FONT_BODY}`;
+    ctx.fillText('※ 依中華民國儲蓄互助協會各項互助基金簡介整理，以協會公告與條款為準', 248, fy + 146);
+  }
+
+  function renderRoute(data) {
+    const canvas = document.getElementById('route-card-canvas');
+    if (!canvas || !data) return null;
+    paintRouteCard(canvas, data);
+    const img = document.getElementById('route-card-img');
+    if (img) {
+      try { img.src = canvas.toDataURL('image/png'); } catch {}
+    }
+    return canvas;
+  }
+
+  function routeFileName() {
+    return `儲互社互助島_路線卡_${window.STORAGE.load().nickname}.png`;
+  }
+
+  function downloadRoute(data) {
+    const canvas = renderRoute(data);
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = routeFileName();
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  async function shareRoute(data) {
+    const canvas = renderRoute(data);
+    if (!canvas) return null;
+    const shareText = `🏝️ 我在《儲互社互助島》逛了「${data.persona.icon}${data.persona.label}」路線（全島 8 站已逛 ${(data.visited || []).length} 站），一起來看 8 大互助基金適合誰、要注意什麼：${GAME_URL}`;
+    try {
+      if (navigator.share) {
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (blob) {
+          const file = new File([blob], routeFileName(), { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: '🏝️ 我的互助島路線卡', text: shareText, files: [file] });
+            return 'shared';
+          }
+        }
+        await navigator.share({ title: '🏝️ 我的互助島路線卡', text: shareText, url: GAME_URL });
+        return 'shared_link';
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return 'cancelled';
+    }
+    try { await navigator.clipboard.writeText(shareText); } catch {}
+    downloadRoute(data);
+    return 'downloaded';
+  }
+
+  return { GAME_URL, render, download, shareToLine, renderRoute, downloadRoute, shareRoute };
 })();

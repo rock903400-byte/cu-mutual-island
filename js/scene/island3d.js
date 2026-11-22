@@ -6,7 +6,7 @@
    3. 橫貫東西岸弧形高架大道（台灣高鐵＋迷你巴士車隊雙向行駛＋30 位散步小人）
    4. 日系莫蘭迪溫潤建築模型配色＋24H 清晨／暖陽／夕陽／星空夜景窗燈
    5. 低 FOV (29°) 微縮移軸望遠透視鏡頭
-   6. 超纖細純白編號名牌（一鍵開關）＋生命時期發光協作光弧線
+   6. 導覽站號名牌（1～8 站、已逛 ✅、你在這裡 📍）＋身分路線與協作線光弧（v16）
    ========================================================================== */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -168,6 +168,15 @@ let simTime = 0;
 let lastFrameMs = 0;
 let pointerDownPos = { x: 0, y: 0 };
 
+// 導覽（v16）狀態：目前這站、身分路線、協作線、已逛紀錄、抽屜造成的鏡頭畫面偏移
+let activeStopId = null;
+let routeIds = null;
+let tourLinkPairs = null;
+let tourState = { order: [], visited: [] };
+let latestTour = null;
+const viewOffsetTarget = { x: 0, y: 0 };
+const viewOffsetCur = { x: 0, y: 0 };
+
 // Material helpers
 function mat(color, opts = {}) {
   return new THREE.MeshStandardMaterial({
@@ -202,96 +211,140 @@ function makeGlowMat(col = 0xffe28a) {
   return m;
 }
 
-// Distinct Label Renderer: Vivid Playable Game Booths (01~05 with live stars/🔥) vs Understated Editorial Fund Tags (06~13)
-function drawLabelCanvas(canvas, num, text, isGame, stars = 0, hardCleared = false) {
+// Canvas 圓角路徑：不用 ctx.roundRect（iOS 16 以前的 Safari 沒有，會讓整座 3D 島載不出來）
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+const LABEL_FONT_UI = '"Noto Sans TC", "Microsoft JhengHei", sans-serif';
+const LABEL_FONT_NUM = '"Zen Maru Gothic", "Noto Sans TC", sans-serif';
+
+function fundColorOf(id) {
+  const f = (window.FUNDS_DATA || []).find(x => x.id === id);
+  return f ? f.color : '#2C8C6D';
+}
+
+function stopNumOf(id) {
+  const order = tourState.order.length ? tourState.order : ((window.TOUR_CONTENT && window.TOUR_CONTENT.order) || []);
+  const i = order.indexOf(id);
+  return i >= 0 ? String(i + 1) : '';
+}
+
+// 名牌三種：導覽站（主視覺：站號＋狀態）／挑戰區遊戲（次要白牌＋星等）／導覽起點
+function drawLabelCanvas(canvas, spec) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (isGame) {
-    // Vivid Playable Carnival Booth Plaque (unmistakably interactive!)
-    const cleared = stars > 0;
+  if (spec.style === 'stop') {
+    const color = spec.color || '#2C8C6D';
+    const state = spec.active ? 'active' : spec.visited ? 'visited' : 'new';
     ctx.save();
-    ctx.shadowColor = cleared ? 'rgba(33, 128, 95, 0.34)' : 'rgba(185, 58, 44, 0.32)';
+    ctx.shadowColor = 'rgba(30, 26, 22, 0.28)';
     ctx.shadowBlur = 14;
     ctx.shadowOffsetY = 4;
-    ctx.fillStyle = cleared ? '#FFFDF5' : '#FFF8F4';
-    ctx.beginPath();
-    ctx.roundRect(12, 10, 436, 76, 38);
+    ctx.fillStyle = state === 'active' ? '#FFF4D6' : '#FFFDF7';
+    roundRectPath(ctx, 12, 10, 436, 76, 38);
     ctx.fill();
     ctx.restore();
 
-    ctx.strokeStyle = cleared ? '#21805F' : '#DF5646';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.roundRect(12, 10, 436, 76, 38);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = state === 'active' ? 7 : 5;
+    roundRectPath(ctx, 12, 10, 436, 76, 38);
     ctx.stroke();
 
-    // Left colored number pill
-    ctx.fillStyle = cleared ? '#21805F' : '#DF5646';
-    ctx.beginPath();
-    ctx.roundRect(22, 20, 74, 56, 28);
+    ctx.fillStyle = color;
+    roundRectPath(ctx, 22, 20, 74, 56, 28);
     ctx.fill();
 
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 28px "Zen Maru Gothic", "Noto Sans TC", sans-serif';
-    ctx.fillText(num, 59, 49);
+    ctx.font = `900 32px ${LABEL_FONT_NUM}`;
+    ctx.fillText(String(spec.num || ''), 59, 49);
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#1E1510';
-    ctx.font = '900 28px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText(text, 108, 38);
+    ctx.font = `900 28px ${LABEL_FONT_UI}`;
+    ctx.fillText(spec.text, 108, 38);
 
-    // Bottom status row: Stars + Hard Flame or "點擊闖關"
-    if (cleared) {
-      const starTxt = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-      ctx.fillStyle = '#D9890C';
-      ctx.font = '900 22px sans-serif';
-      ctx.fillText(starTxt + (hardCleared ? ' 🔥魔王' : ' 已點亮'), 108, 68);
-    } else {
-      ctx.fillStyle = '#C73D2E';
-      ctx.font = '900 20px "Noto Sans TC", sans-serif';
-      ctx.fillText('▶ 點此開始闖關', 108, 68);
-    }
-  } else {
-    // Sleek minimal white architectural landmark tag for 00 & 06~13
-    ctx.save();
-    ctx.shadowColor = 'rgba(30, 26, 22, 0.2)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 3;
-    ctx.fillStyle = 'rgba(255, 253, 250, 0.9)';
-    ctx.beginPath();
-    ctx.roundRect(14, 14, 392, 54, 27);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#9E5A38';
-    ctx.font = '900 23px "Zen Maru Gothic", "Noto Sans TC", sans-serif';
-    ctx.fillText(num, 36, 42);
-
-    ctx.fillStyle = '#332B26';
-    ctx.font = '700 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText(text, 78, 42);
+    const status = state === 'active' ? '📍 你在這裡' : state === 'visited' ? '✅ 已逛過' : '👉 點我看介紹';
+    ctx.fillStyle = state === 'visited' ? '#21805F' : state === 'active' ? '#B5541C' : color;
+    ctx.font = `900 21px ${LABEL_FONT_UI}`;
+    ctx.fillText(status, 108, 68);
+    return;
   }
+
+  // 挑戰區遊戲與導覽起點：低調白牌
+  ctx.save();
+  ctx.shadowColor = 'rgba(30, 26, 22, 0.2)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = 'rgba(255, 253, 250, 0.9)';
+  roundRectPath(ctx, 14, 14, 392, 54, 27);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#9E5A38';
+  ctx.font = `900 23px ${LABEL_FONT_NUM}`;
+  ctx.fillText(spec.num || '', 32, 42);
+
+  let text = spec.text;
+  if (spec.style === 'game' && spec.stars > 0) {
+    text += `  ${'★'.repeat(spec.stars)}${spec.hardCleared ? '🔥' : ''}`;
+  }
+  ctx.fillStyle = '#332B26';
+  ctx.font = `700 25px ${LABEL_FONT_UI}`;
+  ctx.fillText(text, 74, 42);
 }
 
-function makeEditorialLabel(num, text, isGame) {
+function initialLabelSpec(tile) {
+  if (tile.kind === 'fund') {
+    return { style: 'stop', num: stopNumOf(tile.id), text: tile.label, color: fundColorOf(tile.id), visited: false, active: false };
+  }
+  if (tile.kind === 'game') {
+    return { style: 'game', num: '🎮', text: tile.label, stars: 0, hardCleared: false };
+  }
+  return { style: 'hub', num: '🧭', text: '導覽起點・儲互社' };
+}
+
+function makeEditorialLabel(tile) {
+  const isStop = tile.kind === 'fund';
   const c = document.createElement('canvas');
-  c.width = isGame ? 460 : 420;
-  c.height = isGame ? 96 : 82;
-  drawLabelCanvas(c, num, text, isGame, 0, false);
+  c.width = isStop ? 460 : 420;
+  c.height = isStop ? 96 : 82;
+  const spec = initialLabelSpec(tile);
+  drawLabelCanvas(c, spec);
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
-  sp.scale.set(isGame ? 2.75 : 2.15, isGame ? 0.57 : 0.42, 1);
-  sp.renderOrder = isGame ? 15 : 11;
-  sp.userData = { canvas: c, tex, num, text, isGame };
+  sp.scale.set(isStop ? 2.75 : 2.15, isStop ? 0.57 : 0.42, 1);
+  sp.renderOrder = isStop ? 15 : 11;
+  sp.userData = { canvas: c, tex, spec };
   labelSprites.push(sp);
   return sp;
+}
+
+function redrawLabel(entry, patch) {
+  const sp = entry.labelSprite;
+  if (!sp || !sp.userData) return;
+  const ud = sp.userData;
+  ud.spec = { ...ud.spec, ...patch };
+  drawLabelCanvas(ud.canvas, ud.spec);
+  ud.tex.needsUpdate = true;
 }
 
 // Micro architectural helpers (Fine Miniature Scale!)
@@ -391,7 +444,7 @@ function addMicroLamp(parent, x, y, z) {
   parent.add(pole, bulb);
 }
 
-// Striped waterfront railing segment (HEART 政策島 signature edge craft!)
+// Striped waterfront railing segment (signature edge craft!)
 function addWaterfrontTrim(parent, topY, edgeIndex) {
   const a1 = (edgeIndex * Math.PI) / 3 + Math.PI / 6;
   const a2 = ((edgeIndex + 1) * Math.PI) / 3 + Math.PI / 6;
@@ -818,7 +871,7 @@ function buildBackdropMountainsAndSatellites() {
   });
   scene.add(mtnGroup);
 
-  // 7 Charming Circular Satellite Islets in the Bay (HEART 政策島 signature!)
+  // 7 Charming Circular Satellite Islets in the Bay
   function makeIslet(x, z, r, topCol) {
     const g = new THREE.Group();
     const foam = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.12, r * 1.15, 0.05, 16), new THREE.MeshBasicMaterial({ color: 0xeaf6f7, transparent: true, opacity: 0.45 }));
@@ -1140,22 +1193,25 @@ function buildHexIsland() {
     let clearedStar = null;
 
     if (tile.kind !== 'scenic') {
-      labelSprite = makeEditorialLabel(tile.num, tile.label, tile.kind === 'game');
+      labelSprite = makeEditorialLabel(tile);
       labelSprite.position.y = topY + (tile.id === 'game4' ? 2.85 : tile.id === 'hub' ? 2.35 : 1.85);
       group.add(labelSprite);
     }
 
-    // Playable Game Booth Progression Props: Inviting Halo (unplayed) & Golden Star Trophy (cleared)!
-    if (tile.kind === 'game') {
+    // 導覽站：還沒逛過的站有呼吸光圈（基金代表色）
+    if (tile.kind === 'fund') {
       unplayedHalo = new THREE.Mesh(
         new THREE.RingGeometry(HEX_R * 0.78, HEX_R * 0.94, 6),
-        new THREE.MeshBasicMaterial({ color: 0xdf5646, side: THREE.DoubleSide, transparent: true, opacity: 0.52 })
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(fundColorOf(tile.id)), side: THREE.DoubleSide, transparent: true, opacity: 0.5 })
       );
       unplayedHalo.rotation.x = -Math.PI / 2;
       unplayedHalo.rotation.z = Math.PI / 6;
       unplayedHalo.position.y = topY + 0.03;
       group.add(unplayedHalo);
+    }
 
+    // 挑戰區遊戲：過關後的金星獎盃
+    if (tile.kind === 'game') {
       clearedStar = new THREE.Mesh(
         new THREE.OctahedronGeometry(0.24, 0),
         makeGlowMat(0xffd24c)
@@ -1203,14 +1259,7 @@ function syncProgress(progress) {
     const info = progress.perBooth?.[entry.tile.id] || { stars: 0, hardCleared: false };
     entry.stars = info.stars || 0;
 
-    if (entry.labelSprite && entry.labelSprite.userData) {
-      const ud = entry.labelSprite.userData;
-      drawLabelCanvas(ud.canvas, ud.num, ud.text, true, entry.stars, Boolean(info.hardCleared));
-      ud.tex.needsUpdate = true;
-    }
-    if (entry.unplayedHalo) {
-      entry.unplayedHalo.visible = entry.stars === 0;
-    }
+    redrawLabel(entry, { stars: entry.stars, hardCleared: Boolean(info.hardCleared) });
     if (entry.clearedStar) {
       entry.clearedStar.visible = entry.stars > 0;
       const scale = entry.stars === 3 ? 1.28 : entry.stars === 2 ? 1.05 : 0.85;
@@ -1285,16 +1334,56 @@ function setTimeOfDay(key) {
   lanternMats.forEach(m => { m.emissiveIntensity = 0.30 + p.nightFactor * 1.85; });
 }
 
+function disposeObject(obj) {
+  if (obj.geometry) obj.geometry.dispose();
+  if (obj.material) obj.material.dispose();
+}
+
+function isFundTile(id) {
+  return tileEntries.some(e => e.tile.id === id && e.tile.kind === 'fund');
+}
+
+function fundOnlyPairs(pairs) {
+  return (pairs || []).filter(([a, b]) => isFundTile(a) && isFundTile(b));
+}
+
+// 全島協作線：導覽內容裡每站寫的「可以搭配」＋舊有的基金對基金連線（去重）
+function allTourPairs() {
+  const stops = (window.TOUR_CONTENT && window.TOUR_CONTENT.stops) || {};
+  const seen = new Set();
+  const out = [];
+  const add = (a, b) => {
+    const key = [a, b].sort().join('|');
+    if (a === b || seen.has(key) || !isFundTile(a) || !isFundTile(b)) return;
+    seen.add(key);
+    out.push([a, b]);
+  };
+  Object.entries(stops).forEach(([from, s]) => (s.pairs || []).forEach(p => add(from, p.to)));
+  fundOnlyPairs(SYNERGY_LINKS.all).forEach(([a, b]) => add(a, b));
+  return out;
+}
+
+// 光弧來源優先序：目前這站的協作線 → 身分路線（依序相連）→ 舊版生命時期 → 全島協作線開關
+function currentArcPairs() {
+  if (tourLinkPairs) return tourLinkPairs;
+  if (currentStageFilter !== 'all') {
+    if (routeIds && routeIds.length > 1) return routeIds.slice(1).map((id, i) => [routeIds[i], id]);
+    return fundOnlyPairs(SYNERGY_LINKS[currentStageFilter]);
+  }
+  return showAllArcs ? allTourPairs() : [];
+}
+
 function rebuildArcs() {
   if (synergyGroup) {
-    while (synergyGroup.children.length > 0) synergyGroup.remove(synergyGroup.children[0]);
+    while (synergyGroup.children.length > 0) {
+      const child = synergyGroup.children[0];
+      synergyGroup.remove(child);
+      disposeObject(child);
+    }
   }
   arcPulses = [];
 
-  const activeKey = currentStageFilter !== 'all' ? currentStageFilter : (showAllArcs ? 'all' : null);
-  if (!activeKey) return;
-
-  const pairs = SYNERGY_LINKS[activeKey] || [];
+  const pairs = currentArcPairs();
   pairs.forEach(([idA, idB], idx) => {
     const a = tileEntries.find(e => e.tile.id === idA);
     const b = tileEntries.find(e => e.tile.id === idB);
@@ -1318,15 +1407,67 @@ function rebuildArcs() {
   });
 }
 
-function setStageFilter(stageKey) {
-  currentStageFilter = stageKey;
+// 身分路線：ids 給了就用導覽路線的站；沒給就退回舊版 tile.stages
+function setStageFilter(stageKey, ids) {
+  currentStageFilter = stageKey || 'all';
+  routeIds = Array.isArray(ids) && ids.length ? ids.slice() : null;
   tileEntries.forEach((entry) => {
-    const match = stageKey === 'all' || (entry.tile.stages && entry.tile.stages.includes(stageKey));
-    entry.pillarMesh.material.opacity = (stageKey !== 'all' && match && entry.tile.kind !== 'scenic') ? 0.16 : 0.0;
-    entry.rimMesh.material.opacity = (stageKey !== 'all' && match) ? 0.85 : 0.0;
-    entry.targetLift = (stageKey !== 'all' && match) ? 0.18 : 0.0;
+    entry.inFilter = currentStageFilter !== 'all' && (routeIds
+      ? routeIds.includes(entry.tile.id)
+      : Boolean(entry.tile.stages && entry.tile.stages.includes(currentStageFilter)));
   });
   rebuildArcs();
+}
+
+// 導覽站名牌：站號、已逛 ✅、呼吸光圈
+function syncTour(data) {
+  if (data) latestTour = data;
+  if (!latestTour) return;
+  tourState = { order: latestTour.order || [], visited: latestTour.visited || [] };
+  tileEntries.forEach(e => {
+    if (e.tile.kind !== 'fund') return;
+    e.visited = tourState.visited.includes(e.tile.id);
+    redrawLabel(e, { num: stopNumOf(e.tile.id), visited: e.visited, active: e.tile.id === activeStopId });
+    if (e.unplayedHalo) e.unplayedHalo.visible = !e.visited && e.tile.id !== activeStopId;
+  });
+}
+
+// 目前打開的這一站：金框呼吸＋光柱＋抬高，名牌顯示「你在這裡」
+function setActiveStop(id) {
+  const prev = activeStopId;
+  activeStopId = id || null;
+  if (prev === activeStopId) return;
+  tileEntries.forEach(e => {
+    if (e.tile.kind !== 'fund') return;
+    if (e.tile.id !== prev && e.tile.id !== activeStopId) return;
+    const isActive = e.tile.id === activeStopId;
+    redrawLabel(e, { active: isActive });
+    // 目前這站的名牌放大一點，鏡頭拉遠時還看得清楚
+    if (e.labelSprite) e.labelSprite.scale.set(2.75 * (isActive ? 1.4 : 1), 0.57 * (isActive ? 1.4 : 1), 1);
+    if (e.unplayedHalo) e.unplayedHalo.visible = !e.visited && !isActive;
+  });
+}
+
+function setTourLinks(pairs) {
+  tourLinkPairs = Array.isArray(pairs) && pairs.length ? pairs.slice() : null;
+  rebuildArcs();
+}
+
+// 抽屜蓋住的區域（px）→ 鏡頭畫面往沒被蓋住的方向偏移，讓目前這站露出來
+function setViewInset(inset) {
+  viewOffsetTarget.x = inset ? (inset.right || 0) / 2 : 0;
+  viewOffsetTarget.y = inset ? (inset.bottom || 0) / 2 : 0;
+}
+
+function applyViewOffset() {
+  if (!camera) return;
+  if (Math.abs(viewOffsetCur.x) < 0.5 && Math.abs(viewOffsetCur.y) < 0.5) {
+    if (camera.view && camera.view.enabled) camera.clearViewOffset();
+    return;
+  }
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  camera.setViewOffset(W, H, viewOffsetCur.x, viewOffsetCur.y, W, H);
 }
 
 function toggleLabels() {
@@ -1347,24 +1488,29 @@ function togglePauseAnim() {
   return animPaused;
 }
 
-function flyToEntry(entry, onArrive) {
+// distScale：鏡頭離這格的距離倍數（1＝原本遊戲用的近景；導覽用 1.5～2，才看得到周圍幾站）
+function flyToEntry(entry, onArrive, distScale = 1) {
   const p = entry.worldPos;
   const dir = new THREE.Vector3(p.x, 0, p.z);
   if (dir.length() < 0.5) dir.set(0.35, 0, 1);
   dir.normalize();
+  const k = Math.max(0.6, Math.min(3, distScale || 1));
   flyTarget = {
-    camEnd: new THREE.Vector3(p.x + dir.x * 7.8, p.y + 8.2, p.z + dir.z * 7.8 + 4.5),
+    camEnd: new THREE.Vector3(p.x + dir.x * 7.8 * k, p.y + 8.2 * k, p.z + (dir.z * 7.8 + 4.5) * k),
     lookEnd: new THREE.Vector3(p.x, p.y + 0.6, p.z),
     progress: 0,
     onArrive
   };
 }
 
-function focusById(id) {
+function focusById(id, onArrive, opts) {
   const entry = tileEntries.find(e => e.tile.id === id);
-  if (!entry) return;
+  if (!entry || !controls) {
+    if (onArrive) onArrive();
+    return;
+  }
   controls.autoRotate = false;
-  flyToEntry(entry);
+  flyToEntry(entry, onArrive, opts && opts.distance);
 }
 
 function resetCamera() {
@@ -1506,14 +1652,17 @@ function animate(nowMs) {
     ap.curve.getPoint(ap.t, ap.mesh.position);
   });
 
-  // Tile hover/filter/pulse lift + inviting unplayed halo + cleared floating star trophy
+  // 每格：目前這站（金框呼吸＋光柱＋抬高）、滑鼠移過、身分路線、已逛過；未逛站的呼吸光圈；遊戲過關金星
   tileEntries.forEach(e => {
+    const isActive = activeStopId !== null && e.tile.id === activeStopId;
     const hoverLift = (e === hoveredEntry) ? 0.22 : 0.0;
+    const filterLift = e.inFilter ? 0.18 : 0.0;
+    const activeLift = isActive ? 0.32 : 0.0;
     if (e.pulseY) {
       e.pulseY *= 0.88;
       if (Math.abs(e.pulseY) < 0.005) e.pulseY = 0;
     }
-    const desired = e.baseY + Math.max(e.targetLift || 0, hoverLift) + (e.pulseY || 0);
+    const desired = e.baseY + Math.max(filterLift, hoverLift, activeLift) + (e.pulseY || 0);
     e.group.position.y += (desired - e.group.position.y) * 0.16;
 
     if (e.unplayedHalo && e.unplayedHalo.visible) {
@@ -1525,9 +1674,25 @@ function animate(nowMs) {
       e.clearedStar.rotation.y = t * 1.8;
     }
 
-    if (e === hoveredEntry) e.rimMesh.material.opacity = 0.95;
-    else if (currentStageFilter === 'all') e.rimMesh.material.opacity = e.stars > 0 ? 0.42 : 0.0;
+    let rim = 0;
+    if (isActive) rim = 0.7 + (Math.sin(t * 3.2) * 0.5 + 0.5) * 0.3;
+    else if (e === hoveredEntry) rim = 0.95;
+    else if (e.inFilter) rim = 0.85;
+    else if (currentStageFilter === 'all' && e.visited) rim = 0.36;
+    e.rimMesh.material.opacity = rim;
+    e.pillarMesh.material.opacity = isActive ? 0.22 : (e.inFilter && e.tile.kind !== 'scenic') ? 0.16 : 0.0;
   });
+
+  // 導覽抽屜打開／關閉時，鏡頭畫面平滑偏移
+  const dxo = viewOffsetTarget.x - viewOffsetCur.x;
+  const dyo = viewOffsetTarget.y - viewOffsetCur.y;
+  if (Math.abs(dxo) > 0.3 || Math.abs(dyo) > 0.3) {
+    viewOffsetCur.x += dxo * 0.18;
+    viewOffsetCur.y += dyo * 0.18;
+    if (Math.abs(viewOffsetTarget.x - viewOffsetCur.x) <= 0.3) viewOffsetCur.x = viewOffsetTarget.x;
+    if (Math.abs(viewOffsetTarget.y - viewOffsetCur.y) <= 0.3) viewOffsetCur.y = viewOffsetTarget.y;
+    applyViewOffset();
+  }
 
   if (flyTarget) {
     flyTarget.progress += 0.055;
@@ -1641,8 +1806,11 @@ function init3D() {
     if (hoveredEntry && tooltip) {
       const t = hoveredEntry.tile;
       canvas.style.cursor = 'pointer';
-      const hint = t.kind === 'game' ? '點此開始挑戰' : t.kind === 'fund' ? '點此看基金條款' : '微縮風景地塊';
-      tooltip.textContent = `${t.num ? t.num + ' ' : ''}${t.label} ‧ ${hint}`;
+      const hint = t.kind === 'game' ? '🎮 挑戰區小遊戲'
+        : (t.kind === 'fund' || t.fundRef) ? '點我看這一站'
+        : t.kind === 'hub' ? '從這裡開始導覽' : '微縮風景';
+      const prefix = t.kind === 'fund' ? `${stopNumOf(t.id)} 號站 ` : '';
+      tooltip.textContent = `${prefix}${t.label} ‧ ${hint}`;
       tooltip.style.left = `${e.clientX}px`;
       tooltip.style.top = `${e.clientY}px`;
       tooltip.classList.remove('hidden');
@@ -1669,6 +1837,7 @@ function init3D() {
     if (!renderer) return;
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    applyViewOffset();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
@@ -1676,6 +1845,21 @@ function init3D() {
     syncProgress(latestProgress);
   } else if (window.STORAGE && window.STORAGE.getIslandProgress) {
     syncProgress(window.STORAGE.getIslandProgress());
+  }
+
+  // 導覽：站號名牌與已逛紀錄、上次選的身分路線
+  if (latestTour) {
+    syncTour(latestTour);
+  } else if (window.TOUR_CONTENT && window.STORAGE && window.STORAGE.getTour) {
+    syncTour({ order: window.TOUR_CONTENT.order, visited: window.STORAGE.getTour().visited });
+  }
+  if (window.TOUR && window.TOUR.onIslandReady) window.TOUR.onIslandReady();
+
+  // 網頁字型載入完成後重畫名牌（避免先用到系統字型）
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      tileEntries.forEach(e => redrawLabel(e, {}));
+    }).catch(() => {});
   }
 
   isRunning = true;
@@ -1689,14 +1873,14 @@ function handleHexClick(entry) {
 
   if (t.kind === 'game') {
     flyToEntry(entry, () => window.APP && window.APP.openBooth(t.id));
-  } else if (t.kind === 'fund') {
-    flyToEntry(entry, () => window.APP && window.APP.openFundCard(t.id));
+  } else if (t.kind === 'fund' || t.fundRef) {
+    // 導覽站：立刻打開站卡（站卡會自己把鏡頭飛過去），抽屜開著時點別站就直接換站
+    window.APP && window.APP.openFundCard(t.kind === 'fund' ? t.id : t.fundRef);
   } else if (t.id === 'hub') {
-    flyToEntry(entry, () => window.APP && window.APP.openHubInfo());
-  } else if (t.fundRef) {
-    flyToEntry(entry, () => window.APP && window.APP.openFundCard(t.fundRef));
+    flyToEntry(entry);
+    window.APP && window.APP.openHubInfo();
   } else {
-    flyToEntry(entry, () => window.APP && window.APP.toast(`${t.label}：台灣微縮風景地塊，點選紅牌 01~05 開始闖關！`));
+    flyToEntry(entry, () => window.APP && window.APP.toast(`${t.label}：微縮風景。點有號碼牌的地標，看互助基金介紹！`));
   }
 }
 
@@ -1711,7 +1895,11 @@ window.ISLAND_3D = {
   focusById,
   syncProgress,
   triggerFireworks,
-  pulseBooth
+  pulseBooth,
+  syncTour,
+  setActiveStop,
+  setTourLinks,
+  setViewInset
 };
 
 window.addEventListener('DOMContentLoaded', init3D);

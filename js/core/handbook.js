@@ -22,35 +22,21 @@ window.HANDBOOK = (function () {
     });
   }
 
-  function matchesQuery(fund, q) {
-    if (!q) return true;
-    const blob = [
-      fund.name, fund.shortName, fund.period, fund.deadline, fund.ageRule, fund.summary,
-      ...(fund.highlights || []),
-      ...(fund.plansTable?.rows?.flat() || [])
-    ].join(' ').toLowerCase();
-    return blob.includes(q.toLowerCase());
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   }
 
-  function renderCards() {
-    const body = document.getElementById('handbook-body');
-    if (!body) return;
-    const list = window.FUNDS_DATA.filter(f => {
-      if (activeTab !== 'all' && f.id !== activeTab) return false;
-      return matchesQuery(f, searchQuery);
-    });
-
-    if (list.length === 0) {
-      body.innerHTML = `<p style="text-align:center;padding:30px;color:#8B766A;">找不到符合「<strong>${searchQuery}</strong>」的條款內容，試試改搜「85歲」「退股」「等待期」「馴獸師」「25」吧！</p>`;
-      return;
-    }
-
-    body.innerHTML = list.map(f => `
+  // 共用的基金條款卡（圖鑑、導覽站「完整條款」都用這一份）
+  function renderFundDoc(f, { showHead = true } = {}) {
+    if (!f) return '';
+    return `
       <article class="fund-doc-card" style="--fund-color:${f.color}">
-        <div class="fund-doc-head">
-          <h3>${f.icon} ${f.name}</h3>
-          <span class="fund-period-pill">📄 ${f.sourcePdf}</span>
-        </div>
+        ${showHead ? `
+          <div class="fund-doc-head">
+            <h3>${f.icon} ${f.name}</h3>
+            <span class="fund-period-pill">📄 ${f.sourcePdf}</span>
+          </div>
+        ` : `<span class="fund-period-pill">📄 ${f.sourcePdf}</span>`}
         <p style="margin:0 0 10px;color:#5C4B42;font-size:0.93rem;">${f.summary}</p>
         <div class="fund-kv-grid">
           <div class="fund-kv"><strong>📅 保障期間</strong>${f.period}</div>
@@ -71,7 +57,47 @@ window.HANDBOOK = (function () {
           ${f.highlights.map(h => `<li>${h}</li>`).join('')}
         </ul>
       </article>
-    `).join('');
+    `;
+  }
+
+  // 導覽站的白話內容也一起搜（v16）
+  function tourStrings(fundId) {
+    const s = window.TOUR_CONTENT && window.TOUR_CONTENT.stops ? window.TOUR_CONTENT.stops[fundId] : null;
+    if (!s) return [];
+    return [
+      s.oneLiner,
+      ...(s.suits || []), ...(s.notFor || []), ...(s.cautions || []),
+      ...((s.plans && s.plans.rows) || []).map(r => `${r.name} ${r.fee} ${r.line}`),
+      ...(s.stories || []).flatMap(st => [st.title, st.happened, st.result, st.tip])
+    ];
+  }
+
+  function matchesQuery(fund, q) {
+    if (!q) return true;
+    const norm = (str) => String(str || '').replace(/\s+/g, '').toLowerCase();
+    const blob = norm([
+      fund.name, fund.shortName, fund.period, fund.deadline, fund.ageRule, fund.summary,
+      ...(fund.highlights || []),
+      ...(fund.plansTable?.rows?.flat() || []),
+      ...tourStrings(fund.id)
+    ].join(' '));
+    return blob.includes(norm(q));
+  }
+
+  function renderCards() {
+    const body = document.getElementById('handbook-body');
+    if (!body) return;
+    const list = window.FUNDS_DATA.filter(f => {
+      if (activeTab !== 'all' && f.id !== activeTab) return false;
+      return matchesQuery(f, searchQuery);
+    });
+
+    if (list.length === 0) {
+      body.innerHTML = `<p style="text-align:center;padding:30px;color:#8B766A;">找不到符合「<strong>${escapeHtml(searchQuery)}</strong>」的條款內容，試試改搜「85歲」「退股」「等待期」「馴獸師」「25」吧！</p>`;
+      return;
+    }
+
+    body.innerHTML = list.map(f => renderFundDoc(f)).join('');
   }
 
   function init() {
@@ -96,5 +122,5 @@ window.HANDBOOK = (function () {
     document.getElementById('modal-handbook')?.classList.remove('hidden');
   }
 
-  return { init, open };
+  return { init, open, renderFundDoc, escapeHtml };
 })();

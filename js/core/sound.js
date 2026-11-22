@@ -355,6 +355,10 @@ window.SOUND = (function () {
       }
       flushFadingAudios();
     },
+    // 影片結束但使用者還沒互動過：只解除「影片播放中」狀態，不硬放音樂（瀏覽器會擋），等第一次點擊再開
+    releaseVideoHold() {
+      pausedForVideo = false;
+    },
     resumeBgmAfterVideo() {
       pausedForVideo = false;
       if (!enabled) return;

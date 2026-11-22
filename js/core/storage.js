@@ -29,6 +29,21 @@ window.STORAGE = (function () {
     return { stars: 0, bestScore: 0, plays: 0, hardStars: 0, hardBest: 0 };
   }
 
+  // 導覽進度（v16 新增）：逛過哪幾站、目前身分路線、是否關掉新手引導
+  function defaultTour() {
+    return { visited: [], persona: 'all', guideDismissed: false };
+  }
+
+  function sanitizeTour(t) {
+    const base = defaultTour();
+    if (!t || typeof t !== 'object') return base;
+    return {
+      visited: Array.isArray(t.visited) ? t.visited.filter(x => typeof x === 'string') : [],
+      persona: typeof t.persona === 'string' ? t.persona : base.persona,
+      guideDismissed: Boolean(t.guideDismissed)
+    };
+  }
+
   function defaultState() {
     return {
       nickname: '熱心社員',
@@ -39,7 +54,8 @@ window.STORAGE = (function () {
         game4: defaultBooth(),
         game5: defaultBooth()
       },
-      badges: []
+      badges: [],
+      tour: defaultTour()
     };
   }
 
@@ -56,7 +72,8 @@ window.STORAGE = (function () {
       return {
         nickname: parsed.nickname || base.nickname,
         booths: mergedBooths,
-        badges: Array.isArray(parsed.badges) ? parsed.badges : []
+        badges: Array.isArray(parsed.badges) ? parsed.badges : [],
+        tour: sanitizeTour(parsed.tour)
       };
     } catch {
       return defaultState();
@@ -158,10 +175,43 @@ window.STORAGE = (function () {
     return state;
   }
 
+  // 只清挑戰區（星等、魔王章、勳章），導覽紀錄保留，與確認視窗的文字一致
   function resetAll() {
+    const keepTour = load().tour;
     const fresh = defaultState();
+    fresh.tour = keepTour;
     save(fresh);
     return fresh;
+  }
+
+  function getTour(state = load()) {
+    return state.tour || defaultTour();
+  }
+
+  function markVisited(stopId) {
+    const state = load();
+    const tour = getTour(state);
+    const isNew = !tour.visited.includes(stopId);
+    if (isNew) {
+      tour.visited.push(stopId);
+      state.tour = tour;
+      save(state);
+    }
+    return { tour, isNew };
+  }
+
+  function setPersona(key) {
+    const state = load();
+    state.tour = { ...getTour(state), persona: key };
+    save(state);
+    return state.tour;
+  }
+
+  function dismissGuide() {
+    const state = load();
+    state.tour = { ...getTour(state), guideDismissed: true };
+    save(state);
+    return state.tour;
   }
 
   return {
@@ -175,6 +225,10 @@ window.STORAGE = (function () {
     getIslandProgress,
     recordResult,
     setNickname,
-    resetAll
+    resetAll,
+    getTour,
+    markVisited,
+    setPersona,
+    dismissGuide
   };
 })();
