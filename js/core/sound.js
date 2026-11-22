@@ -1,8 +1,7 @@
 /* ==========================================================================
-   音效、國台語配音與「日夜雙原聲配樂自動淡入＋語音閃避」引擎 (v12)
-   - 白天/清晨 -> bgm_day.mp3（CC0 實錄暖陽烏克麗麗／木吉他原聲）
-   - 夕陽/星空夜景 -> bgm_night.mp3（CC0 實錄柔和晚安鋼琴／八音盒原聲）
-   - 修復快速切換日夜疊音、支援國台語語音播放自動壓低 BGM、支援片頭影片暫停連動
+   音效、國台語智慧輪播配音與「日夜雙原聲配樂自動淡入＋語音閃避」引擎 (v14)
+   - 智慧語音節奏：避免每題重複播放同一句台語，依連擊／關鍵彩蛋／多口氣輪播
+   - 新增輪盤撥片聲、飛卡呼嘯聲、偵探發現線索聲、彩帶慶祝聲
    ========================================================================== */
 window.SOUND = (function () {
   let ctx = null;
@@ -17,6 +16,90 @@ window.SOUND = (function () {
   let synthTimer = null;
   let synthStep = 0;
   let activeVoice = null;
+  let goodToggle = 0;
+  let missCount = 0;
+  let lastVoiceMs = 0;
+  let pausedByLifecycle = false;
+  let resumeFadeTimer = null;
+
+  function pauseAllVideos() {
+    document.querySelectorAll('video').forEach(v => {
+      try { if (!v.paused) v.pause(); } catch {}
+    });
+  }
+
+  function handleBackgroundPause(hardStop = false) {
+    if (resumeFadeTimer) { clearInterval(resumeFadeTimer); resumeFadeTimer = null; }
+    stopVoice();
+    pauseAllVideos();
+    if (ctx && ctx.state === 'running') {
+      ctx.suspend().catch(() => {});
+    }
+    if (hardStop) {
+      // pagehide / beforeunload: completely release audio streams so LINE WebView NEVER leaks background sound!
+      pausedByLifecycle = bgmStarted;
+      stopBgm();
+      return;
+    }
+    if (activeAudio && !activeAudio.paused) {
+      pausedByLifecycle = true;
+      try { activeAudio.pause(); } catch {}
+    } else if (bgmStarted && !pausedForVideo) {
+      pausedByLifecycle = true;
+    }
+    flushFadingAudios();
+  }
+
+  function handleForegroundResume() {
+    if (document.hidden) return;
+    if (ctx && ctx.state === 'suspended' && enabled) {
+      ctx.resume().catch(() => {});
+    }
+    if (!pausedByLifecycle || !enabled || !bgmStarted || pausedForVideo) {
+      pausedByLifecycle = false;
+      return;
+    }
+    pausedByLifecycle = false;
+    if (activeAudio) {
+      const target = getCurrentTargetVol();
+      activeAudio.volume = 0.0;
+      activeAudio.play().then(() => {
+        if (resumeFadeTimer) clearInterval(resumeFadeTimer);
+        let step = 0;
+        const steps = 10;
+        resumeFadeTimer = setInterval(() => {
+          step++;
+          if (!activeAudio || document.hidden || !enabled || pausedForVideo) {
+            clearInterval(resumeFadeTimer);
+            resumeFadeTimer = null;
+            return;
+          }
+          const tgt = getCurrentTargetVol();
+          activeAudio.volume = Math.min(tgt, tgt * (step / steps));
+          if (step >= steps) {
+            clearInterval(resumeFadeTimer);
+            resumeFadeTimer = null;
+            activeAudio.volume = tgt;
+          }
+        }, 50);
+      }).catch(() => {});
+    } else {
+      startBgm();
+    }
+  }
+
+  // LINE In-App Browser (iOS WKWebView / Android WebView) + Mobile Switch/Lock Lifecycle Guards
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) handleBackgroundPause(false);
+    else handleForegroundResume();
+  });
+  window.addEventListener('pagehide', () => handleBackgroundPause(true));
+  window.addEventListener('beforeunload', () => handleBackgroundPause(true));
+  window.addEventListener('blur', () => handleBackgroundPause(false));
+  window.addEventListener('focus', () => handleForegroundResume());
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted || pausedByLifecycle) handleForegroundResume();
+  });
 
   function ensureCtx() {
     if (!enabled) return null;
@@ -47,7 +130,6 @@ window.SOUND = (function () {
     osc.stop(now + dur + 0.03);
   }
 
-  // Fallback gentle polyphonic Day (ukulele/marimba) & Night (music box/piano)
   const DAY_MELODY = [523.25, 659.25, 783.99, 659.25, 880.0, 783.99, 659.25, 587.33, 523.25, 587.33, 659.25, 783.99, 1046.5, 880.0, 783.99, 659.25];
   const NIGHT_MELODY = [659.25, 783.99, 987.77, 783.99, 659.25, 587.33, 523.25, 587.33, 659.25, 987.77, 880.0, 783.99, 659.25, 523.25, 587.33, 523.25];
 
@@ -108,7 +190,6 @@ window.SOUND = (function () {
 
   function crossfadeToAudio(url) {
     stopSynth();
-    // Immediately kill any previously fading-out tracks so rapid clicks NEVER leak overlapping audio!
     flushFadingAudios();
 
     if (activeAudio && activeAudio._trackUrl === url) {
@@ -133,7 +214,6 @@ window.SOUND = (function () {
     }
 
     nextAudio.play().then(() => {
-      // Guard: if activeAudio changed while awaiting play(), abort this stale instance!
       if (activeAudio !== nextAudio) {
         killAudio(nextAudio);
         return;
@@ -154,7 +234,6 @@ window.SOUND = (function () {
         }
       }, 55);
     }).catch(() => {
-      // Autoplay blocked until next user gesture
       flushFadingAudios();
       if (activeAudio === nextAudio) activeAudio = null;
     });
@@ -192,15 +271,16 @@ window.SOUND = (function () {
   }
 
   function playVoice(key) {
-    if (!enabled || !key) return;
+    if (!enabled || !key) return false;
     const url = window.ASSETS_MANIFEST && window.ASSETS_MANIFEST.getAudioUrl(key);
-    if (!url) return;
+    if (!url) return false;
     try {
       stopVoice();
       const v = new Audio(url);
       v.volume = 0.96;
       activeVoice = v;
       voiceDucking = true;
+      lastVoiceMs = Date.now();
       applyDuckingVolume();
 
       const restore = () => {
@@ -213,9 +293,41 @@ window.SOUND = (function () {
       v.onended = restore;
       v.onerror = restore;
       v.play().catch(restore);
+      return true;
     } catch {
       voiceDucking = false;
       applyDuckingVolume();
+      return false;
+    }
+  }
+
+  // Smart reaction voice pacing so players never hear the exact same phrase 6 times in a row!
+  function playReaction(isCorrect, combo = 1, specialKey = null) {
+    if (!enabled) return;
+    if (specialKey && window.ASSETS_MANIFEST?.getAudioUrl(specialKey)) {
+      playVoice(specialKey);
+      return;
+    }
+    const now = Date.now();
+    if (isCorrect) {
+      // Streak milestones always trigger celebratory combo voice
+      if (combo >= 3 && combo % 2 === 1) {
+        if (!playVoice('taigi_combo')) playVoice('taigi_good');
+        return;
+      }
+      // First correct or after sufficient cooldown, alternate between 2 distinct phrases
+      if (combo === 1 || (now - lastVoiceMs > 7500)) {
+        goodToggle += 1;
+        const pick = goodToggle % 2 === 0 ? 'taigi_insider' : 'taigi_good';
+        if (!playVoice(pick)) playVoice('taigi_good');
+      }
+    } else {
+      missCount += 1;
+      // Don't scold every single miss; alternate warm encouragement vs reminder
+      if (missCount === 1 || (now - lastVoiceMs > 6500)) {
+        const pick = missCount % 2 === 1 ? 'taigi_encourage' : 'taigi_reject';
+        if (!playVoice(pick)) playVoice('taigi_reject');
+      }
     }
   }
 
@@ -260,12 +372,42 @@ window.SOUND = (function () {
       if (enabled && bgmStarted && !pausedForVideo) startBgm();
     },
     playVoice,
+    playReaction,
     click() {
       playTone(640, 0.065, 'sine', 0.085);
     },
+    whoosh() {
+      const c = ensureCtx();
+      if (!c) return;
+      const now = c.currentTime;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.16);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+      osc.connect(g);
+      g.connect(c.destination);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    },
     stamp(isApprove = true) {
-      playTone(135, 0.12, 'triangle', 0.24);
-      playTone(isApprove ? 587 : 260, 0.14, 'sine', 0.12, 0.05);
+      playTone(130, 0.13, 'triangle', 0.25);
+      playTone(isApprove ? 620 : 250, 0.14, 'sine', 0.13, 0.045);
+    },
+    clueFound() {
+      playTone(698.46, 0.11, 'sine', 0.13, 0);
+      playTone(880.0, 0.13, 'sine', 0.13, 0.07);
+      playTone(1174.66, 0.22, 'triangle', 0.14, 0.14);
+    },
+    spinTick(pitch = 1.0) {
+      playTone(720 * pitch, 0.045, 'triangle', 0.11, 0);
+    },
+    confetti() {
+      [587.33, 783.99, 987.77, 1174.66].forEach((f, i) => {
+        playTone(f, 0.16, 'triangle', 0.11, i * 0.05);
+      });
     },
     correct(combo = 1) {
       const shift = Math.min(combo - 1, 6) * 45;

@@ -126,13 +126,17 @@ const TIME_PRESETS = {
 
 let renderer, scene, camera, controls;
 let raycaster, pointer;
-let sunLight, hemiLight, oceanMesh, oceanBaseY, skyMat, starField, fireflies;
+let sunLight, hemiLight, oceanMesh, oceanWaveUniforms, skyMat, starField, fireflies;
 let tileEntries = [];
 let labelSprites = [];
 let glowingWindows = [];
 let lanternMats = [];
 let synergyGroup = null;
 let arcPulses = [];
+let celebrationGroup = null;
+let balloons = [];
+let fireworkParticles = [];
+let latestProgress = null;
 
 const anim = {
   wheel: null,
@@ -198,48 +202,94 @@ function makeGlowMat(col = 0xffe28a) {
   return m;
 }
 
-// Ultra-Slender Editorial White Pill Label (HEART 政策島 signature!)
-function makeEditorialLabel(num, text, isGame) {
-  const c = document.createElement('canvas');
-  c.width = 420;
-  c.height = 84;
-  const ctx = c.getContext('2d');
-
-  // Subtle drop shadow + pure editorial white pill (NO chunky colored outline!)
-  ctx.save();
-  ctx.shadowColor = 'rgba(30, 26, 22, 0.22)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetY = 4;
-  ctx.fillStyle = 'rgba(255, 253, 250, 0.96)';
-  ctx.beginPath();
-  ctx.roundRect(14, 12, 392, 58, 29);
-  ctx.fill();
-  ctx.restore();
+// Distinct Label Renderer: Vivid Playable Game Booths (01~05 with live stars/🔥) vs Understated Editorial Fund Tags (06~13)
+function drawLabelCanvas(canvas, num, text, isGame, stars = 0, hardCleared = false) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (isGame) {
-    // Subtle warm terracotta dot indicator for playable game booths
-    ctx.fillStyle = '#D86B52';
+    // Vivid Playable Carnival Booth Plaque (unmistakably interactive!)
+    const cleared = stars > 0;
+    ctx.save();
+    ctx.shadowColor = cleared ? 'rgba(33, 128, 95, 0.34)' : 'rgba(185, 58, 44, 0.32)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = cleared ? '#FFFDF5' : '#FFF8F4';
     ctx.beginPath();
-    ctx.arc(42, 41, 9, 0, Math.PI * 2);
+    ctx.roundRect(12, 10, 436, 76, 38);
     ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = cleared ? '#21805F' : '#DF5646';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(12, 10, 436, 76, 38);
+    ctx.stroke();
+
+    // Left colored number pill
+    ctx.fillStyle = cleared ? '#21805F' : '#DF5646';
+    ctx.beginPath();
+    ctx.roundRect(22, 20, 74, 56, 28);
+    ctx.fill();
+
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 28px "Zen Maru Gothic", "Noto Sans TC", sans-serif';
+    ctx.fillText(num, 59, 49);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1E1510';
+    ctx.font = '900 28px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText(text, 108, 38);
+
+    // Bottom status row: Stars + Hard Flame or "點擊闖關"
+    if (cleared) {
+      const starTxt = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      ctx.fillStyle = '#D9890C';
+      ctx.font = '900 22px sans-serif';
+      ctx.fillText(starTxt + (hardCleared ? ' 🔥魔王' : ' 已點亮'), 108, 68);
+    } else {
+      ctx.fillStyle = '#C73D2E';
+      ctx.font = '900 20px "Noto Sans TC", sans-serif';
+      ctx.fillText('▶ 點此開始闖關', 108, 68);
+    }
+  } else {
+    // Sleek minimal white architectural landmark tag for 00 & 06~13
+    ctx.save();
+    ctx.shadowColor = 'rgba(30, 26, 22, 0.2)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = 'rgba(255, 253, 250, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(14, 14, 392, 54, 27);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#9E5A38';
+    ctx.font = '900 23px "Zen Maru Gothic", "Noto Sans TC", sans-serif';
+    ctx.fillText(num, 36, 42);
+
+    ctx.fillStyle = '#332B26';
+    ctx.font = '700 25px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText(text, 78, 42);
   }
+}
 
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
-  const numX = isGame ? 62 : 38;
-  ctx.fillStyle = '#D4662F';
-  ctx.font = '900 26px "Zen Maru Gothic", "Noto Sans TC", sans-serif';
-  ctx.fillText(num, numX, 42);
-
-  ctx.fillStyle = '#25201C';
-  ctx.font = '700 28px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
-  ctx.fillText(text, numX + 46, 42);
+function makeEditorialLabel(num, text, isGame) {
+  const c = document.createElement('canvas');
+  c.width = isGame ? 460 : 420;
+  c.height = isGame ? 96 : 82;
+  drawLabelCanvas(c, num, text, isGame, 0, false);
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
-  sp.scale.set(2.35, 0.47, 1);
-  sp.renderOrder = 12;
+  sp.scale.set(isGame ? 2.75 : 2.15, isGame ? 0.57 : 0.42, 1);
+  sp.renderOrder = isGame ? 15 : 11;
+  sp.userData = { canvas: c, tex, num, text, isGame };
   labelSprites.push(sp);
   return sp;
 }
@@ -1008,14 +1058,26 @@ function buildAtmosphere() {
   fireflies = new THREE.Points(fGeo, new THREE.PointsMaterial({ color: 0xffe680, size: 0.22, transparent: true, opacity: 0.0 }));
   scene.add(fireflies);
 
-  // Calm Nordic Teal Low-Poly Ocean
-  const oceanGeo = new THREE.PlaneGeometry(180, 180, 48, 48);
+  // Calm Nordic Teal Low-Poly Ocean (Zero-CPU GPU Vertex Shader Waves for Smooth Mobile FPS!)
+  const oceanGeo = new THREE.PlaneGeometry(180, 180, 32, 32);
   oceanGeo.rotateX(-Math.PI / 2);
-  oceanBaseY = Float32Array.from(oceanGeo.attributes.position.array);
-  oceanMesh = new THREE.Mesh(
-    oceanGeo,
-    new THREE.MeshStandardMaterial({ color: TIME_PRESETS.day.ocean, roughness: 0.38, metalness: 0.1, flatShading: true })
-  );
+  oceanWaveUniforms = { uWaveTime: { value: 0 } };
+  const oceanMat = new THREE.MeshStandardMaterial({
+    color: TIME_PRESETS.day.ocean,
+    roughness: 0.38,
+    metalness: 0.1,
+    flatShading: true
+  });
+  oceanMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uWaveTime = oceanWaveUniforms.uWaveTime;
+    shader.vertexShader = 'uniform float uWaveTime;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+       transformed.y += sin(position.x * 0.25 + uWaveTime * 1.1) * 0.075 + cos(position.z * 0.25 + uWaveTime * 0.9) * 0.075;`
+    );
+  };
+  oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
   oceanMesh.position.y = -0.3;
   oceanMesh.receiveShadow = true;
   scene.add(oceanMesh);
@@ -1038,6 +1100,32 @@ function buildAtmosphere() {
   }
 }
 
+function buildCelebrationBalloons() {
+  celebrationGroup = new THREE.Group();
+  celebrationGroup.visible = false;
+
+  const configs = [
+    { r: 7.4, y: 5.4, speed: 0.22, phase: 0.3, col1: PAL.coral, col2: PAL.ochre },
+    { r: 8.6, y: 6.2, speed: -0.18, phase: 3.1, col1: PAL.teal, col2: PAL.sakura }
+  ];
+  configs.forEach(cfg => {
+    const g = new THREE.Group();
+    const env = new THREE.Mesh(new THREE.SphereGeometry(0.68, 12, 10), mat(cfg.col1, { roughness: 0.55 }));
+    env.scale.set(1, 1.18, 1);
+    env.position.y = 0.85;
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.09, 6, 14), mat(cfg.col2));
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.85;
+    const basket = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 0.28), mat(PAL.woodDark));
+    basket.position.y = -0.12;
+    g.add(env, band, basket);
+    g.userData = cfg;
+    celebrationGroup.add(g);
+    balloons.push(g);
+  });
+  scene.add(celebrationGroup);
+}
+
 function buildHexIsland() {
   HEX_TILES.forEach((tile) => {
     const pos = hexToWorld(tile.q, tile.r);
@@ -1047,10 +1135,35 @@ function buildHexIsland() {
 
     populateDioramaTile(tile, group, topY);
 
+    let labelSprite = null;
+    let unplayedHalo = null;
+    let clearedStar = null;
+
     if (tile.kind !== 'scenic') {
-      const sp = makeEditorialLabel(tile.num, tile.label, tile.kind === 'game');
-      sp.position.y = topY + (tile.id === 'game4' ? 2.75 : tile.id === 'hub' ? 2.35 : 1.75);
-      group.add(sp);
+      labelSprite = makeEditorialLabel(tile.num, tile.label, tile.kind === 'game');
+      labelSprite.position.y = topY + (tile.id === 'game4' ? 2.85 : tile.id === 'hub' ? 2.35 : 1.85);
+      group.add(labelSprite);
+    }
+
+    // Playable Game Booth Progression Props: Inviting Halo (unplayed) & Golden Star Trophy (cleared)!
+    if (tile.kind === 'game') {
+      unplayedHalo = new THREE.Mesh(
+        new THREE.RingGeometry(HEX_R * 0.78, HEX_R * 0.94, 6),
+        new THREE.MeshBasicMaterial({ color: 0xdf5646, side: THREE.DoubleSide, transparent: true, opacity: 0.52 })
+      );
+      unplayedHalo.rotation.x = -Math.PI / 2;
+      unplayedHalo.rotation.z = Math.PI / 6;
+      unplayedHalo.position.y = topY + 0.03;
+      group.add(unplayedHalo);
+
+      clearedStar = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.24, 0),
+        makeGlowMat(0xffd24c)
+      );
+      clearedStar.position.set(0.85, topY + 1.45, 0.72);
+      clearedStar.visible = false;
+      clearedStar.userData = { baseY: topY + 1.45, phase: tile.q + tile.r };
+      group.add(clearedStar);
     }
 
     const hit = new THREE.Mesh(
@@ -1061,11 +1174,91 @@ function buildHexIsland() {
     group.add(hit);
 
     scene.add(group);
-    tileEntries.push({ tile, group, baseY: 0, rimMesh, pillarMesh, worldPos: new THREE.Vector3(pos.x, topY, pos.z) });
+    tileEntries.push({
+      tile,
+      group,
+      baseY: 0,
+      pulseY: 0,
+      stars: 0,
+      rimMesh,
+      pillarMesh,
+      labelSprite,
+      unplayedHalo,
+      clearedStar,
+      worldPos: new THREE.Vector3(pos.x, topY, pos.z)
+    });
   });
 
   synergyGroup = new THREE.Group();
   scene.add(synergyGroup);
+  buildCelebrationBalloons();
+}
+
+function syncProgress(progress) {
+  latestProgress = progress;
+  if (!progress || !tileEntries.length) return;
+
+  tileEntries.forEach(entry => {
+    if (entry.tile.kind !== 'game') return;
+    const info = progress.perBooth?.[entry.tile.id] || { stars: 0, hardCleared: false };
+    entry.stars = info.stars || 0;
+
+    if (entry.labelSprite && entry.labelSprite.userData) {
+      const ud = entry.labelSprite.userData;
+      drawLabelCanvas(ud.canvas, ud.num, ud.text, true, entry.stars, Boolean(info.hardCleared));
+      ud.tex.needsUpdate = true;
+    }
+    if (entry.unplayedHalo) {
+      entry.unplayedHalo.visible = entry.stars === 0;
+    }
+    if (entry.clearedStar) {
+      entry.clearedStar.visible = entry.stars > 0;
+      const scale = entry.stars === 3 ? 1.28 : entry.stars === 2 ? 1.05 : 0.85;
+      entry.clearedStar.scale.setScalar(scale);
+    }
+  });
+
+  if (celebrationGroup) {
+    celebrationGroup.visible = Boolean(progress.isAllCleared);
+  }
+}
+
+function triggerFireworks(boothId, isPerfect = false) {
+  if (!scene) return;
+  const entry = tileEntries.find(e => e.tile.id === boothId) || tileEntries[0];
+  if (!entry) return;
+  const origin = entry.worldPos.clone().add(new THREE.Vector3(0, 2.0, 0));
+  const palette = isPerfect
+    ? [0xffd24c, 0xff6b57, 0x45d39c, 0x62b6ff, 0xf799c5]
+    : [0xffd24c, 0xdf5646, 0x2c8c6d];
+
+  const count = isPerfect ? 46 : 28;
+  for (let i = 0; i < count; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(isPerfect ? 0.12 : 0.1, 0),
+      new THREE.MeshBasicMaterial({ color: palette[i % palette.length], transparent: true, opacity: 1 })
+    );
+    mesh.position.copy(origin);
+    const theta = Math.random() * Math.PI * 2;
+    const speed = 1.6 + Math.random() * 2.8;
+    const vy = 3.2 + Math.random() * 3.4;
+    scene.add(mesh);
+    fireworkParticles.push({
+      mesh,
+      vx: Math.cos(theta) * speed,
+      vy,
+      vz: Math.sin(theta) * speed,
+      life: 1.3 + Math.random() * 0.5,
+      age: 0
+    });
+  }
+  entry.pulseY = 0.55;
+}
+
+function pulseBooth(boothId, isCorrect = true) {
+  const entry = tileEntries.find(e => e.tile.id === boothId);
+  if (!entry) return;
+  entry.pulseY = isCorrect ? 0.42 : -0.14;
 }
 
 function setTimeOfDay(key) {
@@ -1200,15 +1393,39 @@ function animate(nowMs) {
   if (!animPaused) simTime += dt;
   const t = simTime;
 
-  // Calm gentle sea undulation
-  if (oceanMesh && !animPaused) {
-    const pos = oceanMesh.geometry.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const bx = oceanBaseY[i * 3];
-      const bz = oceanBaseY[i * 3 + 2];
-      pos.setY(i, Math.sin(bx * 0.25 + t * 1.1) * 0.07 + Math.cos(bz * 0.25 + t * 0.9) * 0.07);
+  // GPU Shader Ocean Wave Uniform (Zero CPU overhead!)
+  if (oceanWaveUniforms && !animPaused) {
+    oceanWaveUniforms.uWaveTime.value = t;
+  }
+
+  // Celebration Hot-Air Balloons (unlocked when all 5 booths cleared!)
+  if (celebrationGroup && celebrationGroup.visible) {
+    balloons.forEach(b => {
+      const cfg = b.userData;
+      const a = t * cfg.speed + cfg.phase;
+      b.position.set(Math.cos(a) * cfg.r, cfg.y + Math.sin(t * 1.4 + cfg.phase) * 0.35, Math.sin(a) * cfg.r);
+      b.rotation.y = -a;
+    });
+  }
+
+  // 3D Fireworks Particles
+  for (let i = fireworkParticles.length - 1; i >= 0; i--) {
+    const fp = fireworkParticles[i];
+    fp.age += dt;
+    if (fp.age >= fp.life) {
+      scene.remove(fp.mesh);
+      fp.mesh.geometry.dispose();
+      fp.mesh.material.dispose();
+      fireworkParticles.splice(i, 1);
+      continue;
     }
-    pos.needsUpdate = true;
+    fp.vy -= 5.8 * dt;
+    fp.mesh.position.x += fp.vx * dt;
+    fp.mesh.position.y += fp.vy * dt;
+    fp.mesh.position.z += fp.vz * dt;
+    fp.mesh.rotation.x += 4 * dt;
+    fp.mesh.rotation.y += 5 * dt;
+    fp.mesh.material.opacity = Math.max(0, 1 - fp.age / fp.life);
   }
 
   // Landmarks
@@ -1289,13 +1506,27 @@ function animate(nowMs) {
     ap.curve.getPoint(ap.t, ap.mesh.position);
   });
 
-  // Tile hover/filter lift
+  // Tile hover/filter/pulse lift + inviting unplayed halo + cleared floating star trophy
   tileEntries.forEach(e => {
     const hoverLift = (e === hoveredEntry) ? 0.22 : 0.0;
-    const desired = e.baseY + Math.max(e.targetLift || 0, hoverLift);
-    e.group.position.y += (desired - e.group.position.y) * 0.15;
+    if (e.pulseY) {
+      e.pulseY *= 0.88;
+      if (Math.abs(e.pulseY) < 0.005) e.pulseY = 0;
+    }
+    const desired = e.baseY + Math.max(e.targetLift || 0, hoverLift) + (e.pulseY || 0);
+    e.group.position.y += (desired - e.group.position.y) * 0.16;
+
+    if (e.unplayedHalo && e.unplayedHalo.visible) {
+      const pulse = 0.28 + (Math.sin(t * 2.8 + e.tile.q) * 0.5 + 0.5) * 0.42;
+      e.unplayedHalo.material.opacity = pulse;
+    }
+    if (e.clearedStar && e.clearedStar.visible) {
+      e.clearedStar.position.y = e.clearedStar.userData.baseY + Math.sin(t * 2.4 + e.clearedStar.userData.phase) * 0.14;
+      e.clearedStar.rotation.y = t * 1.8;
+    }
+
     if (e === hoveredEntry) e.rimMesh.material.opacity = 0.95;
-    else if (currentStageFilter === 'all') e.rimMesh.material.opacity = 0.0;
+    else if (currentStageFilter === 'all') e.rimMesh.material.opacity = e.stars > 0 ? 0.42 : 0.0;
   });
 
   if (flyTarget) {
@@ -1361,8 +1592,9 @@ function init3D() {
   sunLight = new THREE.DirectionalLight(0xfff7e6, 1.55);
   sunLight.position.set(16, 24, 15);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
+  const shadowSize = isMobile ? 1024 : 2048;
+  sunLight.shadow.mapSize.width = shadowSize;
+  sunLight.shadow.mapSize.height = shadowSize;
   sunLight.shadow.camera.left = -20;
   sunLight.shadow.camera.right = 20;
   sunLight.shadow.camera.top = 20;
@@ -1440,6 +1672,12 @@ function init3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  if (latestProgress) {
+    syncProgress(latestProgress);
+  } else if (window.STORAGE && window.STORAGE.getIslandProgress) {
+    syncProgress(window.STORAGE.getIslandProgress());
+  }
+
   isRunning = true;
   requestAnimationFrame(animate);
 }
@@ -1458,7 +1696,7 @@ function handleHexClick(entry) {
   } else if (t.fundRef) {
     flyToEntry(entry, () => window.APP && window.APP.openFundCard(t.fundRef));
   } else {
-    flyToEntry(entry, () => window.APP && window.APP.toast(`${t.label}：台灣微縮風景地塊，點選編號地標探索保障！`));
+    flyToEntry(entry, () => window.APP && window.APP.toast(`${t.label}：台灣微縮風景地塊，點選紅牌 01~05 開始闖關！`));
   }
 }
 
@@ -1470,7 +1708,10 @@ window.ISLAND_3D = {
   togglePauseAnim,
   resetCamera,
   zoomCamera,
-  focusById
+  focusById,
+  syncProgress,
+  triggerFireworks,
+  pulseBooth
 };
 
 window.addEventListener('DOMContentLoaded', init3D);

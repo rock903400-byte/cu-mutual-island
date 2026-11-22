@@ -200,7 +200,148 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
   display: flex;
   align-items: center;
   gap: 7px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+/* Collapsible Scene Settings Trigger & Popover */
+.scene-menu-anchor {
+  position: relative;
+}
+.scene-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--ink-dark);
+}
+.scene-menu-trigger.active {
+  background: #23201E;
+  color: #FFF4D6;
+  border-color: #23201E;
+}
+.scene-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 286px;
+  background: rgba(255, 253, 248, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 2px solid #E5CFAF;
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 18px 42px rgba(20, 24, 34, 0.28);
+  z-index: 60;
+  animation: popIn 0.16s ease;
+}
+.scene-pop-label {
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.time-switcher-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.mini-scene-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.scene-popover .time-btn {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  padding: 7px 4px;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-cream);
+  border: 1.5px solid var(--border-warm);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.scene-popover .time-btn.active {
+  background: #23201E;
+  color: #FFF4D6;
+  border-color: #23201E;
+}
+.scene-popover .svg-tool-btn {
+  border-radius: 12px;
+  padding: 7px 4px;
+  background: var(--bg-cream);
+  border: 1.5px solid var(--border-warm);
+  font-size: 0.7rem;
+}
+.scene-popover .svg-tool-btn.active {
+  background: #23201E;
+  color: #fff;
+  border-color: #23201E;
+}
+
+/* Newbie Guide Banner */
+.newbie-guide-card {
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(255, 250, 236, 0.96), rgba(255, 236, 200, 0.96));
+  backdrop-filter: blur(14px);
+  border: 2.5px solid var(--amber);
+  border-radius: 18px;
+  padding: 10px 13px;
+  box-shadow: 0 12px 28px rgba(45, 26, 8, 0.24);
+  animation: popIn 0.24s ease;
+}
+.newbie-guide-text strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: #8B2B1E;
+}
+.newbie-guide-text small {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink-mid);
+}
+.newbie-guide-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.newbie-go-btn {
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--red), #EB6A4B);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.84rem;
+  box-shadow: 0 3px 0 var(--red-dark);
+  white-space: nowrap;
+}
+.newbie-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink-soft);
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+.dock-pulse {
+  animation: dockPulse 2.1s infinite;
+}
+@keyframes dockPulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(217, 72, 59, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(242, 173, 52, 0.45), 0 6px 18px rgba(217, 72, 59, 0.55); }
 }
 
 /* 24H Sky & Lighting Switcher (Minimal Line SVG) */
@@ -873,8 +1014,397 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
 .res-stat small { display: block; font-size: 0.74rem; color: var(--ink-soft); font-weight: 800; }
 .res-stat strong { font-family: var(--font-display); font-size: 1.04rem; }
 .result-tips { text-align: left; background: #EBF7F0; border: 1.5px solid #B3DAC5; border-radius: 14px; padding: 12px 14px; font-size: 0.92rem; color: var(--emerald-dark); }
-.result-actions-bar { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px 12px; background: #FAF0DC; border-top: 2px solid var(--border-warm); }
-.result-actions-bar button { padding: 12px 6px; font-size: 0.92rem; }
+.result-actions-bar { flex-shrink: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 10px 12px; background: #FAF0DC; border-top: 2px solid var(--border-warm); }
+.result-actions-bar button { padding: 11px 6px; font-size: 0.9rem; }
+.share-btn-row-3 { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr; gap: 8px; margin-bottom: 12px; }
+.share-btn-row-3 button { padding: 11px 6px; font-size: 0.88rem; }
+
+/* Hard Mode Red Badges */
+.hard-mini-pill {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #C43427;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.stamp-slot { position: relative; }
+.stamp-hard-ribbon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #C43427;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+/* ==================== v14 GAME JUICE & DISTINCT MECHANICS ==================== */
+.card-enter { animation: cardEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Game 1: Stamp Slam, Fly-Out, Score Pop & Confetti */
+.swipe-arena { position: relative; }
+.swipe-hint-strip {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.stamp-slam {
+  animation: stampSlam 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes stampSlam {
+  0% { transform: scale(2.1) rotate(-18deg); opacity: 0; }
+  100% { transform: scale(1) rotate(10deg); opacity: 1; }
+}
+.card-fly-right {
+  transition: transform 0.24s ease-in, opacity 0.24s ease-in !important;
+  transform: translateX(120%) rotate(18deg) !important;
+  opacity: 0 !important;
+}
+.card-fly-left {
+  transition: transform 0.24s ease-in, opacity 0.24s ease-in !important;
+  transform: translateX(-120%) rotate(-18deg) !important;
+  opacity: 0 !important;
+}
+.card-shake { animation: cardShake 0.3s ease; }
+@keyframes cardShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.verdict-mini-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-paper);
+  border: 2px solid var(--border-warm);
+  border-radius: 16px;
+}
+.score-float-pop {
+  position: absolute;
+  top: 26%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+  pointer-events: none;
+  animation: floatPop 0.9s ease-out forwards;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+.score-float-pop.ok { background: linear-gradient(135deg, #21805F, #35B084); }
+.score-float-pop.ng { background: linear-gradient(135deg, #AD3024, #DF5646); }
+@keyframes floatPop {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.75); }
+  20% { opacity: 1; transform: translate(-50%, -12px) scale(1.08); }
+  100% { opacity: 0; transform: translate(-50%, -56px) scale(0.95); }
+}
+.confetti-bit {
+  position: absolute;
+  top: 38%;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 28;
+  animation: confettiBurst 0.8s ease-out forwards;
+}
+@keyframes confettiBurst {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); }
+}
+
+/* Game 2: Clinic Diagnostic Check Pills */
+.rx-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #21805F;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+.clue-pill.clue-pass {
+  background: #DFF6EB;
+  border-color: var(--emerald);
+  color: #104B36;
+  animation: popIn 0.2s ease;
+}
+.clue-pill.clue-fail {
+  background: #FDEAE7;
+  border-color: var(--red);
+  color: #8A1C12;
+  animation: cardShake 0.28s ease;
+}
+
+/* Game 3: Detective Clue-Hunt Timeline */
+.clue-prompt-bar {
+  background: #EEF4FC;
+  border: 2px dashed #7D9EC7;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1F4470;
+  margin-bottom: 10px;
+}
+.tl-node-btn {
+  text-align: left;
+  position: relative;
+  transition: transform 0.14s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.tl-node-btn:hover { border-color: var(--indigo); background: #F5F9FF; }
+.tl-node-btn.clue-found {
+  border-color: #D9890C;
+  background: #FFF6DC;
+  box-shadow: 0 0 0 3px rgba(242, 173, 52, 0.35);
+}
+.tl-node-btn.clue-miss { animation: cardShake 0.32s ease; }
+.clue-found-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #D9890C;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.clue-formula-box {
+  background: linear-gradient(135deg, #FFF7DE, #FFEDC2);
+  border: 2.5px solid var(--amber);
+  border-radius: 14px;
+  padding: 11px 13px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #5E3500;
+  animation: popIn 0.22s ease;
+}
+.clue-formula-box strong { display: block; margin-bottom: 3px; color: #9A4D00; }
+
+/* Game 4: Life 85 True Animated SVG Destiny Wheel & Cross-Stage Locks */
+.risk-radar-pill {
+  background: #FFF0EB;
+  border: 1.5px solid #EAB5A8;
+  border-radius: 12px;
+  padding: 7px 11px;
+  font-size: 0.84rem;
+  color: #7D271C;
+  margin-bottom: 10px;
+}
+.wheel-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+.wheel-pointer {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--red-dark);
+  margin-bottom: -10px;
+  z-index: 5;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+}
+.destiny-wheel-svg {
+  border-radius: 50%;
+  box-shadow: 0 10px 26px rgba(68, 43, 21, 0.22);
+  will-change: transform;
+}
+.life-card-opt.locked-opt {
+  background: #F4EFE8;
+  border-style: dashed;
+  border-color: #C7B299;
+  opacity: 0.78;
+}
+.life-delta-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: #fff;
+}
+.life-delta-badge.ok { background: var(--emerald); }
+.life-delta-badge.ng { background: var(--red); }
+
+/* Game 5: Calendar Mnemonic, Slide-In & Delivery Animations */
+.mnemonic-wrap { margin-bottom: 10px; }
+.mnemonic-toggle {
+  width: 100%;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #FFF4DC;
+  border: 1.5px solid var(--amber);
+  color: #7C4500;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+.mnemonic-card {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #FFFDF6;
+  border: 2px solid #E7CFA0;
+  font-size: 0.86rem;
+  color: var(--ink-dark);
+  line-height: 1.5;
+  animation: popIn 0.18s ease;
+}
+.envelope-slide-in { animation: envSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes envSlideIn {
+  from { opacity: 0; transform: translateY(-24px) rotate(-2deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.envelope-deliver {
+  transition: transform 0.24s ease-in, opacity 0.24s ease-in;
+  transform: translateY(28px) scale(0.84);
+  opacity: 0.45;
+}
+.mailbox-grid-3 { grid-template-columns: 1fr; }
+
+/* ==================== v15 MOBILE ULTRA-CLEAN & ELDER HINT STYLES ==================== */
+.brand-mob-ico { display: none; }
+.mobile-only-label, .mobile-only-grid { display: none; }
+.popover-stage-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.popover-stage-grid .stage-chip:first-child {
+  grid-column: 1 / -1;
+}
+.popover-stage-grid .stage-chip {
+  padding: 7px 8px;
+  font-size: 0.76rem;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: none;
+  background: var(--bg-cream);
+  border-color: var(--border-warm);
+}
+.popover-stage-grid .stage-chip.active {
+  background: linear-gradient(135deg, #F2AD34, #DF5646);
+  color: #fff;
+  border-color: #FFF2C2;
+}
+
+/* Difficulty Toggle Inside Booths Drawer */
+.drawer-diff-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.drawer-diff-btn {
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: var(--bg-paper);
+  border: 2px solid var(--border-warm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.drawer-diff-btn strong { font-family: var(--font-display); font-size: 0.94rem; }
+.drawer-diff-btn small { font-size: 0.72rem; font-weight: 800; color: var(--ink-soft); }
+.drawer-diff-btn.active-easy {
+  background: #E4F6EE;
+  border-color: var(--emerald);
+  color: var(--emerald-dark);
+}
+.drawer-diff-btn.active-easy small { color: var(--emerald-dark); }
+.drawer-diff-btn.active-hard {
+  background: #FDEAE7;
+  border-color: var(--red);
+  color: var(--red-dark);
+}
+.drawer-diff-btn.active-hard small { color: var(--red-dark); }
+
+/* Elder-Friendly One-Tap Mascot Hint Pill & Box (Easy Mode Free Helper!) */
+.elder-hint-wrap { margin: 8px 0 10px; }
+.elder-hint-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FFF7E0, #FFEDC2);
+  border: 2px solid var(--amber);
+  color: #7A4100;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+.elder-hint-box {
+  margin-top: 6px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: #FFFDF5;
+  border: 2px solid #EBC074;
+  color: #4D2C00;
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.5;
+  animation: popIn 0.18s ease;
+}
+
+/* LINE Long-Press Share Card Image */
+.share-card-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  border: 2px solid var(--border-warm);
+  -webkit-touch-callout: default;
+}
+.line-save-tip {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #156046;
+  background: #E6F6EE;
+  padding: 7px 10px;
+  border-radius: 10px;
+}
+
+@media (max-width: 820px) {
+  .brand-eng { display: none; }
+  .brand-mob-ico { display: inline; }
+  .brand-editorial { padding: 7px 12px; border-radius: 999px; }
+  .brand-zh strong { font-size: 0.92rem; }
+  .top-diff-desktop { display: none; }
+  .desktop-stage-row { display: none; }
+  .mobile-only-label { display: block; }
+  .mobile-only-grid { display: grid; }
+  .scene-menu-trigger { padding: 7px 11px; font-size: 0.8rem; }
+  .scene-popover { width: 280px; right: -42px; }
+  .newbie-guide-card { padding: 8px 11px; border-radius: 16px; }
+  .newbie-guide-text strong { font-size: 0.84rem; }
+  .newbie-guide-text small { display: none; }
+  .newbie-go-btn { padding: 7px 11px; font-size: 0.8rem; }
+}
 .result-video-slot video { width: 100%; max-height: 190px; border-radius: 14px; margin-bottom: 10px; object-fit: cover; }
 
 .intro-video-card {

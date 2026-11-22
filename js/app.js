@@ -1,10 +1,12 @@
 /* ==========================================================================
-   儲互社互助島 — 全螢幕 3D 微縮世界 × 浮動毛玻璃側／底抽屜控制器 (v5)
+   儲互社互助島 — 全螢幕 3D 微縮世界 × 精簡浮動 HUD × 島嶼進度連動控制器 (v14)
    ========================================================================== */
 window.APP = (function () {
   let currentDiff = 'easy';
   let activeBoothId = null;
   let quoteIdx = 0;
+  let newbieDismissed = false;
+  let pendingFirework = null;
 
   const GAME_MODULES = {
     game1: () => window.GAME_SWIPE,
@@ -21,7 +23,6 @@ window.APP = (function () {
     senior: '🌻 70~85歲銀髮線：松年意外續至 85 歲含實支實付＋防癌計畫三續至 75 歲＋75 歲前 LS 終身有效！'
   };
 
-  // Map each fund landmark to its best related mini-game
   const FUND_TO_GAME = {
     lp: 'game3', ls: 'game3', group: 'game2', accident: 'game1',
     senior: 'game4', cancer: 'game2', ci: 'game3', officer: 'game5'
@@ -38,12 +39,12 @@ window.APP = (function () {
 
   function toast(msg) {
     const container = document.getElementById('toast-container');
-    if (!container) return;
+    if (!container || !msg) return;
     const div = document.createElement('div');
     div.className = 'toast-msg';
     div.textContent = msg;
     container.appendChild(div);
-    setTimeout(() => div.remove(), 3000);
+    setTimeout(() => div.remove(), 3100);
   }
 
   function setBottomBar(html) {
@@ -59,13 +60,41 @@ window.APP = (function () {
     return bar;
   }
 
-  function renderHeaderStars() {
-    const stars = window.STORAGE.getTotalStars();
+  function syncIslandAndHud() {
+    const progress = window.STORAGE.getIslandProgress();
     const badge = document.getElementById('header-star-badge');
-    if (badge) badge.textContent = `${stars}/15`;
+    if (badge) {
+      badge.textContent = progress.hardBadges > 0
+        ? `${progress.totalStars}/15 ★`
+        : `${progress.totalStars}/15`;
+    }
+
+    // Highlight primary CTA when player hasn't collected stars yet
+    const boothBtn = document.getElementById('btn-open-booths');
+    boothBtn?.classList.toggle('dock-pulse', progress.totalStars === 0);
+
+    // Show/Hide newbie onboarding card cleanly
+    const guide = document.getElementById('newbie-guide-card');
+    const drawerOpen = !document.getElementById('side-drawer')?.classList.contains('hidden');
+    const introOpen = !document.getElementById('modal-intro-video')?.classList.contains('hidden');
+    if (guide) {
+      const shouldShow = progress.totalStars === 0 && !newbieDismissed && !drawerOpen && !introOpen;
+      guide.classList.toggle('hidden', !shouldShow);
+    }
+
+    // Push live progress to 3D Island (updates stars on labels, beacons, hot-air balloons!)
+    window.ISLAND_3D && window.ISLAND_3D.syncProgress && window.ISLAND_3D.syncProgress(progress);
   }
 
-  function closeDrawer() {
+  function closeScenePopover() {
+    const pop = document.getElementById('scene-popover');
+    const btn = document.getElementById('btn-scene-menu');
+    pop?.classList.add('hidden');
+    btn?.setAttribute('aria-expanded', 'false');
+    btn?.classList.remove('active');
+  }
+
+  function closeDrawer(triggerCelebration = false) {
     cleanupActiveBooth();
     activeBoothId = null;
     document.getElementById('side-drawer')?.classList.add('hidden');
@@ -73,16 +102,30 @@ window.APP = (function () {
     document.getElementById('drawer-game')?.classList.add('hidden');
     document.getElementById('modal-result')?.classList.add('hidden');
     document.getElementById('float-cam-tools')?.classList.remove('hidden');
-    renderHeaderStars();
+    syncIslandAndHud();
+
+    if (triggerCelebration && pendingFirework) {
+      const fw = pendingFirework;
+      pendingFirework = null;
+      if (window.ISLAND_3D) {
+        window.ISLAND_3D.focusById && window.ISLAND_3D.focusById(fw.boothId);
+        setTimeout(() => {
+          window.ISLAND_3D.triggerFireworks && window.ISLAND_3D.triggerFireworks(fw.boothId, fw.isPerfect);
+          window.SOUND.confetti();
+        }, 380);
+      }
+    }
   }
 
   function showExploreDrawer(title, sub, html) {
+    closeScenePopover();
     cleanupActiveBooth();
     activeBoothId = null;
     document.getElementById('drawer-game')?.classList.add('hidden');
     document.getElementById('drawer-explore')?.classList.remove('hidden');
     document.getElementById('side-drawer')?.classList.remove('hidden');
     document.getElementById('float-cam-tools')?.classList.add('hidden');
+    document.getElementById('newbie-guide-card')?.classList.add('hidden');
 
     document.getElementById('explore-title').textContent = title;
     document.getElementById('explore-sub').textContent = sub;
@@ -93,25 +136,37 @@ window.APP = (function () {
 
   function openBoothsList() {
     const state = window.STORAGE.load();
+    const prog = window.STORAGE.getIslandProgress(state);
     const mascotImg = window.ASSETS_MANIFEST.getImageUrl('mascot_host');
     const html = `
+      <div class="drawer-diff-bar" role="group" aria-label="選擇遊玩難度">
+        <button type="button" class="drawer-diff-btn ${currentDiff === 'easy' ? 'active-easy' : ''}" data-drawer-diff="easy">
+          <strong>🌱 輕鬆安心版</strong>
+          <small>不限時・5 題・免費提示</small>
+        </button>
+        <button type="button" class="drawer-diff-btn ${currentDiff === 'hard' ? 'active-hard' : ''}" data-drawer-diff="hard">
+          <strong>🔥 幹部魔王版</strong>
+          <small>限時精算・收集魔王赤章</small>
+        </button>
+      </div>
       <div class="mascot-hero-card">
         <div class="mascot-big-img">${mascotImg ? `<img src="${mascotImg}" alt="互助小管家" />` : '🎪'}</div>
         <div>
-          <strong style="color:#AD3024;font-size:0.92rem;">互助小管家歡迎你！</strong>
-          <p style="margin:4px 0 0;font-size:0.94rem;font-weight:700;">${window.GAME_CONTENT.mascotQuotes[quoteIdx]}</p>
+          <strong style="color:#AD3024;font-size:0.9rem;">互助小管家｜進度 ${prog.totalStars}/15 ★・🔥${prog.hardBadges}/5</strong>
+          <p style="margin:4px 0 0;font-size:0.92rem;font-weight:700;">${window.GAME_CONTENT.mascotQuotes[quoteIdx]}</p>
         </div>
       </div>
       <div class="booths-stack">
         ${window.BOOTHS_META.map(b => {
-          const rec = state.booths[b.id] || { stars: 0, bestScore: 0 };
+          const rec = state.booths[b.id] || { stars: 0, bestScore: 0, hardStars: 0 };
           const starsStr = '★'.repeat(rec.stars) + '☆'.repeat(3 - rec.stars);
+          const hardBadge = (rec.hardStars || 0) >= 2 ? '<span class="hard-mini-pill">🔥 魔王征服</span>' : '';
           return `
             <button class="booth-card" style="--booth-color:${b.color};--booth-soft:${b.soft}" data-open-booth="${b.id}">
               <div class="booth-card-top">
                 <div class="booth-icon-badge">${b.icon}</div>
                 <div class="booth-meta">
-                  <div class="booth-num">${b.num}</div>
+                  <div class="booth-num">${b.num} ${hardBadge}</div>
                   <h3>${b.title}</h3>
                 </div>
                 <div class="booth-stars">${starsStr}</div>
@@ -120,7 +175,7 @@ window.APP = (function () {
               <div class="booth-tags">${b.tags.map(t => `<span class="booth-tag">#${t}</span>`).join('')}</div>
               <div class="booth-footer">
                 <span>最高：<strong>${rec.bestScore.toLocaleString()}</strong> 分</span>
-                <span class="booth-play-cta">進入挑戰 →</span>
+                <span class="booth-play-cta">${rec.stars > 0 ? '再次挑戰 →' : '立即開玩 →'}</span>
               </div>
             </button>
           `;
@@ -132,9 +187,22 @@ window.APP = (function () {
     `;
     showExploreDrawer(
       '🎪 五大嘉年華挑戰攤位',
-      `目前難度：${currentDiff === 'hard' ? '🔥 幹部魔王版' : '🌱 社員輕鬆版'}（也可直接點擊 3D 島上地標！）`,
+      currentDiff === 'hard'
+        ? '🔥 幹部魔王版：計時＋實務精算，達 2★ 拿魔王赤章！'
+        : '🌱 輕鬆安心版：不限時、5 題輕量、每題免費附白話提示！',
       html
     );
+    document.querySelectorAll('#explore-body [data-drawer-diff]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.drawerDiff;
+        if (target === currentDiff) return;
+        window.SOUND.click();
+        currentDiff = target;
+        document.querySelectorAll('.diff-pill').forEach(b => b.classList.toggle('active', b.dataset.diff === currentDiff));
+        toast(currentDiff === 'hard' ? '🔥 已切換為「幹部魔王版」' : '🌱 已切換為「輕鬆安心版」（不限時＋白話提示）');
+        openBoothsList();
+      });
+    });
     document.querySelectorAll('#explore-body [data-open-booth]').forEach(btn => {
       btn.addEventListener('click', () => {
         window.SOUND.click();
@@ -179,7 +247,7 @@ window.APP = (function () {
       </div>
     `;
 
-    showExploreDrawer(`${f.icon} ${f.name}`, '3D 地標詳情 ‧ 18px 特大字速覽', html);
+    showExploreDrawer(`${f.icon} ${f.name}`, '3D 基金地標詳情 ‧ 18px 特大字速覽', html);
     document.getElementById('btn-fund-play-rel')?.addEventListener('click', () => {
       window.SOUND.click();
       openBooth(relGameId);
@@ -205,11 +273,24 @@ window.APP = (function () {
     setBottomBar('');
   }
 
+  function getNextBoothId(fromId) {
+    const ids = window.BOOTHS_META.map(b => b.id);
+    const state = window.STORAGE.load();
+    const curIdx = ids.indexOf(fromId);
+    // Prefer next unplayed booth after current, then any unplayed, then cyclic next
+    for (let step = 1; step <= ids.length; step++) {
+      const cand = ids[(curIdx + step) % ids.length];
+      if ((state.booths[cand]?.stars || 0) === 0) return cand;
+    }
+    return ids[(curIdx + 1) % ids.length];
+  }
+
   function openBooth(boothId) {
     const meta = window.BOOTHS_META.find(b => b.id === boothId);
     const mod = GAME_MODULES[boothId] && GAME_MODULES[boothId]();
     if (!meta || !mod) return;
 
+    closeScenePopover();
     cleanupActiveBooth();
     activeBoothId = boothId;
     window.SOUND.ensureBgm();
@@ -219,11 +300,12 @@ window.APP = (function () {
     document.getElementById('drawer-game')?.classList.remove('hidden');
     document.getElementById('side-drawer')?.classList.remove('hidden');
     document.getElementById('float-cam-tools')?.classList.add('hidden');
+    document.getElementById('newbie-guide-card')?.classList.add('hidden');
     document.getElementById('modal-result')?.classList.add('hidden');
 
     document.getElementById('active-game-title').textContent = `${meta.icon} ${meta.shortTitle}`;
     const diffBadge = document.getElementById('active-game-diff');
-    diffBadge.textContent = currentDiff === 'hard' ? '🔥 幹部魔王版' : '🌱 社員輕鬆版';
+    diffBadge.textContent = currentDiff === 'hard' ? '🔥 幹部魔王版' : '🌱 輕鬆安心版';
     diffBadge.classList.toggle('hard', currentDiff === 'hard');
 
     const stage = document.getElementById('game-stage');
@@ -241,16 +323,27 @@ window.APP = (function () {
 
   function showResult(boothId, res) {
     setBottomBar('');
+    const prevProg = window.STORAGE.getIslandProgress();
     const { newlyUnlocked } = window.STORAGE.recordResult(boothId, {
       stars: res.stars,
       score: res.score,
       diff: currentDiff
     });
-    renderHeaderStars();
+    const nextProg = window.STORAGE.getIslandProgress();
+    syncIslandAndHud();
+
+    if (res.stars >= 1) {
+      pendingFirework = { boothId, isPerfect: res.stars === 3 };
+      // Immediate celebration burst on desktop left 3D island!
+      window.ISLAND_3D && window.ISLAND_3D.triggerFireworks && window.ISLAND_3D.triggerFireworks(boothId, res.stars === 3);
+    }
 
     window.SOUND.fanfare(res.stars === 3);
     const modal = document.getElementById('modal-result');
-    document.getElementById('result-stamp-badge').textContent = res.stars >= 2 ? 'STAMPED! 集章成功' : res.stars === 1 ? 'PASS! 過關集章' : '加油！再試一次';
+    const hardPass = currentDiff === 'hard' && res.stars >= 2;
+    document.getElementById('result-stamp-badge').textContent = hardPass
+      ? '🔥 魔王赤章制霸！'
+      : res.stars >= 2 ? 'STAMPED! 點亮地標' : res.stars === 1 ? 'PASS! 過關集章' : '加油！再試一次';
     document.getElementById('result-stars').textContent = '★'.repeat(res.stars) + '☆'.repeat(3 - res.stars);
     document.getElementById('result-heading').textContent = res.stars === 3 ? '🎉 滿星大滿貫！' : res.stars >= 1 ? '👏 挑戰成功！' : '💪 差一點點就拿章囉！';
     document.getElementById('result-quote').textContent = res.quote;
@@ -263,6 +356,15 @@ window.APP = (function () {
         ${res.tips.map(t => `<li style="margin-bottom:4px;">${t}</li>`).join('')}
       </ul>
     `;
+
+    // Update "下一攤" CTA label cleanly
+    const nextId = getNextBoothId(boothId);
+    const nextMeta = window.BOOTHS_META.find(b => b.id === nextId);
+    const nextBtn = document.getElementById('btn-res-next');
+    if (nextBtn && nextMeta) {
+      nextBtn.dataset.nextBooth = nextId;
+      nextBtn.textContent = `➡️ ${nextMeta.icon} 下一攤`;
+    }
 
     const vidSlot = document.getElementById('result-video-slot');
     if (vidSlot) {
@@ -277,18 +379,24 @@ window.APP = (function () {
 
     modal.classList.remove('hidden');
     newlyUnlocked.forEach(ach => toast(`🎖️ 解鎖勳章：${ach.icon} ${ach.name}！`));
+    if (!prevProg.isAllCleared && nextProg.isAllCleared) {
+      toast('🎈 恭喜全島制霸！回島嶼看天空熱氣球＆慶祝煙火！');
+    }
   }
 
   function openPassport() {
+    closeScenePopover();
     const state = window.STORAGE.load();
     const stars = window.STORAGE.getTotalStars(state);
+    const hardBadges = window.STORAGE.getHardBadgeCount(state);
     const totalScore = window.STORAGE.getTotalScore(state);
     const rank = window.STORAGE.getRank(state);
 
     document.getElementById('passport-summary').innerHTML = `
       <div>
-        <div style="font-size:0.82rem;color:#8B5305;font-weight:800;">目前稱號</div>
+        <div style="font-size:0.8rem;color:#8B5305;font-weight:800;">目前稱號</div>
         <div class="rank-title">${rank.icon} ${rank.title}</div>
+        <div style="font-size:0.82rem;color:#AD3024;font-weight:900;margin-top:2px;">🔥 幹部魔王赤章：${hardBadges} / 5 枚</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:1.25rem;font-weight:900;color:#AD3024;">${stars} / 15 ★</div>
@@ -296,9 +404,11 @@ window.APP = (function () {
       </div>
     `;
     document.getElementById('passport-stamps').innerHTML = window.BOOTHS_META.map(b => {
-      const rec = state.booths[b.id] || { stars: 0, bestScore: 0 };
+      const rec = state.booths[b.id] || { stars: 0, bestScore: 0, hardStars: 0 };
+      const hardCleared = (rec.hardStars || 0) >= 2;
       return `
         <div class="stamp-slot ${rec.stars > 0 ? 'stamped' : ''}">
+          ${hardCleared ? '<span class="stamp-hard-ribbon">🔥魔王</span>' : ''}
           <div class="stamp-circle">${b.icon}</div>
           <strong style="display:block;font-size:0.9rem;">${b.shortTitle}</strong>
           <div style="color:#A86804;letter-spacing:2px;font-size:0.95rem;">${'★'.repeat(rec.stars) + '☆'.repeat(3 - rec.stars)}</div>
@@ -360,9 +470,43 @@ window.APP = (function () {
   function bindGlobalEvents() {
     document.getElementById('btn-home')?.addEventListener('click', () => {
       window.SOUND.click();
-      closeDrawer();
+      closeScenePopover();
+      closeDrawer(false);
       setStageFilterUI('all');
       window.ISLAND_3D && window.ISLAND_3D.resetCamera();
+    });
+
+    // Collapsible Scene Popover Toggle
+    const sceneBtn = document.getElementById('btn-scene-menu');
+    const scenePop = document.getElementById('scene-popover');
+    sceneBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.SOUND.click();
+      const willOpen = scenePop?.classList.contains('hidden');
+      scenePop?.classList.toggle('hidden', !willOpen);
+      sceneBtn.setAttribute('aria-expanded', String(Boolean(willOpen)));
+      sceneBtn.classList.toggle('active', Boolean(willOpen));
+    });
+    document.addEventListener('click', (e) => {
+      if (scenePop && !scenePop.classList.contains('hidden')) {
+        if (!scenePop.contains(e.target) && !sceneBtn?.contains(e.target)) {
+          closeScenePopover();
+        }
+      }
+    });
+
+    // Newbie Guide Quick-Start
+    document.getElementById('btn-newbie-go')?.addEventListener('click', () => {
+      window.SOUND.click();
+      window.SOUND.ensureBgm();
+      newbieDismissed = true;
+      window.ISLAND_3D && window.ISLAND_3D.focusById('game1');
+      openBooth('game1');
+    });
+    document.getElementById('btn-newbie-close')?.addEventListener('click', () => {
+      window.SOUND.click();
+      newbieDismissed = true;
+      document.getElementById('newbie-guide-card')?.classList.add('hidden');
     });
 
     document.getElementById('btn-open-booths')?.addEventListener('click', () => {
@@ -373,11 +517,11 @@ window.APP = (function () {
 
     document.getElementById('btn-close-drawer')?.addEventListener('click', () => {
       window.SOUND.click();
-      closeDrawer();
+      closeDrawer(false);
     });
     document.getElementById('btn-back-lobby')?.addEventListener('click', () => {
       window.SOUND.click();
-      closeDrawer();
+      closeDrawer(false);
     });
     document.getElementById('btn-restart-game')?.addEventListener('click', () => {
       window.SOUND.click();
@@ -401,11 +545,12 @@ window.APP = (function () {
       });
     });
 
-    // Life-Stage Synergy Arc Chips
+    // Life-Stage Synergy Arc Chips (Desktop dock + Mobile popover both stay in sync!)
     document.querySelectorAll('.stage-chip').forEach(btn => {
       btn.addEventListener('click', () => {
         window.SOUND.click();
         setStageFilterUI(btn.dataset.stage);
+        closeScenePopover();
       });
     });
     document.getElementById('btn-clear-synergy')?.addEventListener('click', () => {
@@ -413,19 +558,28 @@ window.APP = (function () {
       setStageFilterUI('all');
     });
 
-    // Difficulty Switch
+    // Difficulty Switch with Mid-Game Protection Guardrail!
+    function requestSwitchDiff(targetDiff) {
+      if (targetDiff === currentDiff) return;
+      window.SOUND.click();
+      if (activeBoothId && !confirm(`切換為「${targetDiff === 'hard' ? '🔥 幹部魔王版' : '🌱 社員輕鬆版'}」將重新開始本攤挑戰，確定切換嗎？`)) {
+        return;
+      }
+      currentDiff = targetDiff;
+      document.querySelectorAll('.diff-pill').forEach(b => b.classList.toggle('active', b.dataset.diff === currentDiff));
+      toast(currentDiff === 'hard' ? '🔥 已切換為「幹部魔王版」（達 2★ 可拿魔王赤章！）' : '🌱 已切換為「社員輕鬆版」');
+      if (activeBoothId) openBooth(activeBoothId);
+    }
     document.querySelectorAll('.diff-pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        window.SOUND.click();
-        currentDiff = btn.dataset.diff;
-        document.querySelectorAll('.diff-pill').forEach(b => b.classList.toggle('active', b.dataset.diff === currentDiff));
-        toast(currentDiff === 'hard' ? '🔥 已切換為「幹部魔王版」' : '🌱 已切換為「社員輕鬆版」');
-        if (activeBoothId) openBooth(activeBoothId);
-      });
+      btn.addEventListener('click', () => requestSwitchDiff(btn.dataset.diff));
+    });
+    document.getElementById('active-game-diff')?.addEventListener('click', () => {
+      requestSwitchDiff(currentDiff === 'easy' ? 'hard' : 'easy');
     });
 
     document.getElementById('btn-handbook')?.addEventListener('click', () => {
       window.SOUND.click();
+      closeScenePopover();
       window.HANDBOOK.open('all');
     });
     document.getElementById('btn-passport')?.addEventListener('click', () => {
@@ -440,7 +594,7 @@ window.APP = (function () {
       toast(`🎪 小管家：${window.GAME_CONTENT.mascotQuotes[quoteIdx]}`);
     });
 
-    // Minimal SVG Scene Tools (名牌 / 協作線 / 暫停 / 全景)
+    // Scene Tools inside Popover
     document.getElementById('btn-toggle-labels')?.addEventListener('click', (e) => {
       window.SOUND.click();
       const on = window.ISLAND_3D && window.ISLAND_3D.toggleLabels();
@@ -459,10 +613,12 @@ window.APP = (function () {
     });
     document.getElementById('btn-top-reset')?.addEventListener('click', () => {
       window.SOUND.click();
+      closeScenePopover();
       window.ISLAND_3D && window.ISLAND_3D.resetCamera();
     });
     document.getElementById('btn-play-intro')?.addEventListener('click', () => {
       window.SOUND.click();
+      closeScenePopover();
       openIntroVideo(false);
     });
 
@@ -505,6 +661,13 @@ window.APP = (function () {
       });
     });
 
+    // Result Sheet Actions
+    document.getElementById('btn-res-next')?.addEventListener('click', (e) => {
+      window.SOUND.click();
+      const nextId = e.currentTarget.dataset.nextBooth || getNextBoothId(activeBoothId);
+      window.ISLAND_3D && window.ISLAND_3D.focusById && window.ISLAND_3D.focusById(nextId);
+      openBooth(nextId);
+    });
     document.getElementById('btn-res-replay')?.addEventListener('click', () => {
       window.SOUND.click();
       if (activeBoothId) openBooth(activeBoothId);
@@ -516,9 +679,10 @@ window.APP = (function () {
     });
     document.getElementById('btn-res-lobby')?.addEventListener('click', () => {
       window.SOUND.click();
-      closeDrawer();
+      closeDrawer(true);
     });
 
+    // Share Card Actions
     document.getElementById('btn-render-card')?.addEventListener('click', () => {
       window.SOUND.click();
       window.STORAGE.setNickname(document.getElementById('player-nickname')?.value);
@@ -530,15 +694,27 @@ window.APP = (function () {
       window.SHARE_CARD.download();
       toast('📥 戰績卡 PNG 已下載，快傳去 LINE 群組！');
     });
+    document.getElementById('btn-share-line')?.addEventListener('click', async () => {
+      window.SOUND.click();
+      window.STORAGE.setNickname(document.getElementById('player-nickname')?.value);
+      const res = await window.SHARE_CARD.shareToLine();
+      if (res === 'shared' || res === 'shared_link') {
+        toast('🎉 已開啟分享，選個 LINE 群組炫耀吧！');
+      } else if (res === 'downloaded') {
+        toast('📥 戰績卡已下載＋網址已複製，貼到 LINE 群組即可推坑！');
+      }
+    });
+
     document.getElementById('btn-skip-intro')?.addEventListener('click', () => {
       window.SOUND.click();
       closeIntroVideo(true);
     });
 
     document.getElementById('btn-reset-progress')?.addEventListener('click', () => {
-      if (confirm('確定要清除所有攤位星等與集章紀錄嗎？')) {
+      if (confirm('確定要清除所有攤位星等、魔王章與集章紀錄嗎？')) {
         window.STORAGE.resetAll();
-        renderHeaderStars();
+        newbieDismissed = false;
+        syncIslandAndHud();
         openPassport();
         toast('🗑️ 已重設集章紀錄');
       }
@@ -556,6 +732,7 @@ window.APP = (function () {
       window.SOUND.resumeBgmAfterVideo();
       window.SOUND.ensureBgm();
     }
+    syncIslandAndHud();
   }
 
   function openIntroVideo(autoMuted = true) {
@@ -572,25 +749,38 @@ window.APP = (function () {
       vid.currentTime = 0;
       vid.onended = () => closeIntroVideo(!autoMuted);
       modal.classList.remove('hidden');
+      document.getElementById('newbie-guide-card')?.classList.add('hidden');
       vid.play().catch(() => {});
     }
   }
 
   function init() {
     window.HANDBOOK.init();
-    renderHeaderStars();
     bindGlobalEvents();
+    syncIslandAndHud();
     if (window.location.protocol === 'file:') {
       show2DFallback('離線 2D 模式（雙擊 start_game.bat 或放上網站即可開啟全螢幕 3D 互助島！）');
     }
     window.ASSETS_MANIFEST.scanAll().then((det) => {
       if (det && det.videos && det.videos.intro) {
         openIntroVideo(true);
+      } else {
+        syncIslandAndHud();
       }
     });
   }
 
   window.addEventListener('DOMContentLoaded', init);
 
-  return { openBooth, openFundCard, openHubInfo, goLobby: closeDrawer, isPaused, toast, setBottomBar, show2DFallback };
+  return {
+    openBooth,
+    openFundCard,
+    openHubInfo,
+    goLobby: () => closeDrawer(false),
+    isPaused,
+    toast,
+    setBottomBar,
+    show2DFallback,
+    syncIslandAndHud
+  };
 })();
