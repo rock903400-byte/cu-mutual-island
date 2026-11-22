@@ -1,0 +1,14 @@
+.git
+.gitignore
+.assetsignore
+.wrangler
+wrangler.jsonc
+tools
+start_game.bat
+README.md
+*.md
+*.pdf
+__pycache__
+*.pyc
+.DS_Store
+Thumbs.db

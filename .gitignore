@@ -1,0 +1,13 @@
+# 原始參考 PDF（僅保留於本機，不推上公開儲存庫）
+*.pdf
+
+# Cloudflare Wrangler 本地快取與開發檔案
+.wrangler/
+.dev.vars
+
+# Python / OS 暫存檔
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+node_modules/

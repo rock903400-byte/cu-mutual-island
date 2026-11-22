@@ -1,0 +1,39 @@
+{
+  "model3d": false,
+  "videos": {
+    "intro": true,
+    "victory": true
+  },
+  "images": {
+    "mascot_host": true,
+    "carnival_hero": false,
+    "char_tamer": true,
+    "char_grandma": true,
+    "char_grandpa": true,
+    "char_baby": true,
+    "char_climber": true,
+    "char_teacher": true,
+    "char_shop": true,
+    "char_office": true,
+    "char_pyro": true,
+    "char_officer": true,
+    "char_sailor": true
+  },
+  "audio": {
+    "bgm": true,
+    "bgm_day": true,
+    "bgm_night": true,
+    "welcome": true,
+    "taigi_welcome": true,
+    "taigi_good": true,
+    "taigi_reject": true,
+    "taigi_tamer": true,
+    "taigi_victory": true,
+    "victory": true,
+    "booth_game1": true,
+    "booth_game2": true,
+    "booth_game3": true,
+    "booth_game4": true,
+    "booth_game5": true
+  }
+}
