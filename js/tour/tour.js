@@ -38,6 +38,21 @@ window.TOUR = (function () {
     return url ? `<img class="${cls}" src="${url}" alt="${alt}" loading="lazy" />` : '';
   }
 
+  // 句子格式（tour_content.js 長句拆短用）：\n 換行；換行後以「・」開頭的行排成小條列
+  function fmt(text) {
+    const blocks = [];
+    let sub = [];
+    const flush = () => { if (sub.length) { blocks.push({ list: sub }); sub = []; } };
+    String(text ?? '').split('\n').forEach(line => {
+      if (line.startsWith('・')) sub.push(line.slice(1).trim());
+      else { flush(); blocks.push({ text: line }); }
+    });
+    flush();
+    return blocks.map((b, i) => b.list
+      ? `<ul class="tour-sub">${b.list.map(t => `<li>${t}</li>`).join('')}</ul>`
+      : `${i > 0 && !blocks[i - 1].list ? '<br>' : ''}${b.text}`).join('');
+  }
+
   /* ---------------- 抽屜、底部列、半高抽屜與 3D 鏡頭偏移 ---------------- */
   function showDrawer(title, sub, html) {
     window.APP.showExploreDrawer(title, sub, html, { tour: true });
@@ -140,8 +155,18 @@ window.TOUR = (function () {
     return `
       <section class="tour-sec tour-sec-${kind}">
         <h4>${title}</h4>
-        <ul>${items.map(t => `<li>${t}</li>`).join('')}</ul>
+        <ul>${items.map(t => `<li>${fmt(t)}</li>`).join('')}</ul>
       </section>`;
+  }
+
+  // 可以點開／收起來的區塊（計畫表、看更多）：預設收起來，長輩第一眼不用滑太多
+  function fold(cls, label, inner, closeBtn) {
+    return `
+      <details class="tour-fold ${cls}">
+        <summary><span class="tour-fold-label">${label}</span><span class="tour-fold-hint" aria-hidden="true"></span></summary>
+        ${inner}
+        ${closeBtn ? '<button type="button" class="tour-fold-close" data-tour-fold-close>👆 收起來</button>' : ''}
+      </details>`;
   }
 
   function renderHero(f) {
@@ -157,9 +182,7 @@ window.TOUR = (function () {
 
   function renderPlans(p) {
     if (!p || !p.rows || !p.rows.length) return '';
-    return `
-      <section class="tour-sec tour-sec-plans">
-        <h4>${p.title || '📋 方案一次看'}</h4>
+    return fold('tour-fold-plans', p.title || '📋 方案一次看', `
         <div class="tour-plan-list">
           ${p.rows.map(r => `
             <div class="tour-plan-row">
@@ -167,8 +190,7 @@ window.TOUR = (function () {
               <p>${r.line}</p>
             </div>`).join('')}
         </div>
-        ${p.note ? `<p class="tour-plan-note">※ ${p.note}</p>` : ''}
-      </section>`;
+        ${p.note ? `<p class="tour-plan-note">※ ${p.note}</p>` : ''}`, false);
   }
 
   function renderQuotes(s) {
@@ -184,30 +206,54 @@ window.TOUR = (function () {
           ${img ? `<span class="tour-story-av">${img}</span>` : ''}
           <div><strong>${st.title}</strong><small>${st.who}</small></div>
         </div>
-        <p class="tour-story-line"><b>發生什麼：</b>${st.happened}</p>
-        <p class="tour-story-line tour-story-result"><b>結果：</b>${st.result}</p>
-        ${st.tip ? `<p class="tour-story-tip">💡 ${st.tip}</p>` : ''}
+        <div class="tour-story-line"><b>發生什麼：</b>${fmt(st.happened)}</div>
+        <div class="tour-story-line tour-story-result"><b>結果：</b>${fmt(st.result)}</div>
+        ${st.tip ? `<div class="tour-story-tip">💡 ${fmt(st.tip)}</div>` : ''}
       </div>`;
+  }
+
+  // 第一眼只露 1 個狀況劇：走身分路線時挑標了該身分的（personas），沒有就用第一個
+  function pickStory(stories, personaKey) {
+    if (!stories || !stories.length) return -1;
+    const i = personaKey === 'all' ? -1 : stories.findIndex(st => (st.personas || []).includes(personaKey));
+    return i >= 0 ? i : 0;
   }
 
   const DISCLAIMER = '<p class="tour-disclaimer">本頁依中華民國儲蓄互助協會各項互助基金簡介整理，詳細內容以協會公告、條款及各社證書為準。</p>';
 
+  // 站卡分兩層（2026-11-23 長輩友善）：
+  //   第一眼：一句話、大數字、（計畫表按鈕）、適合誰、不適合誰、最要注意 1～2 條、1 個狀況劇
+  //   看更多：其他要注意（社務手續等）、其他狀況劇、可以搭配
   function renderStop(f, s, personaKey) {
     const p = getPersona(personaKey);
     const note = personaKey !== 'all' && s.personaNotes ? s.personaNotes[personaKey] : '';
-    const pairs = (s.pairs || []).map(pr => {
+    const pairList = (s.pairs || []).filter(pr => fundOf(pr.to));
+    const pairs = pairList.map(pr => {
       const pf = fundOf(pr.to);
-      if (!pf) return '';
       return `
         <button type="button" class="tour-pair-btn" style="--fund-color:${pf.color}" data-tour-go="${pf.id}">
           <strong>${pf.icon} ${stopNo(pf.id)} 號站｜${pf.shortName} →</strong>
           <span>${pr.why}</span>
         </button>`;
     }).join('');
+    const stories = s.stories || [];
+    const pick = pickStory(stories, personaKey);
+    const otherStories = stories.filter((_, i) => i !== pick);
+    const moreCautions = s.cautions || [];
+    const moreLabel = [
+      moreCautions.length ? `要注意 ${moreCautions.length} 條` : '',
+      otherStories.length ? `狀況劇 ${otherStories.length} 個` : '',
+      pairList.length ? `可以搭配 ${pairList.length} 站` : ''
+    ].filter(Boolean).join('、');
+    const moreInner = [
+      section(s.keyCautions && s.keyCautions.length ? '⚠️ 其他要注意' : '⚠️ 要注意', moreCautions, 'caution'),
+      otherStories.length ? `<section class="tour-sec tour-sec-story"><h4>🎭 ${pick >= 0 ? '其他狀況劇' : '狀況劇'}</h4>${otherStories.map(renderStory).join('')}</section>` : '',
+      pairs ? `<section class="tour-sec tour-sec-pairs"><h4>🔗 可以搭配</h4><div class="tour-pairs">${pairs}</div></section>` : ''
+    ].join('');
     return `
       <article class="tour-stop" style="--fund-color:${f.color}">
         ${renderHero(f)}
-        <p class="tour-oneliner">${s.oneLiner}</p>
+        <div class="tour-oneliner">${fmt(s.oneLiner)}</div>
         ${note ? `<p class="tour-persona-note">${p.icon} ${note}</p>` : ''}
         <div class="tour-keynums">
           ${(s.keyNumbers || []).map(k => `<div class="tour-keynum"><small>${k.label}</small><strong>${k.value}</strong></div>`).join('')}
@@ -215,9 +261,9 @@ window.TOUR = (function () {
         ${renderPlans(s.plans)}
         ${section('👍 適合誰', s.suits, 'suits')}
         ${section(s.notForTitle || '🚫 不適合誰', s.notFor, 'notfor')}
-        ${section('⚠️ 要注意', s.cautions, 'caution')}
-        ${(s.stories || []).length ? `<section class="tour-sec tour-sec-story"><h4>🎭 狀況劇</h4>${s.stories.map(renderStory).join('')}</section>` : ''}
-        ${pairs ? `<section class="tour-sec tour-sec-pairs"><h4>🔗 可以搭配</h4><div class="tour-pairs">${pairs}</div></section>` : ''}
+        ${section('⚠️ 最要注意', s.keyCautions, 'caution')}
+        ${pick >= 0 ? `<section class="tour-sec tour-sec-story"><h4>🎭 狀況劇</h4>${renderStory(stories[pick])}</section>` : ''}
+        ${moreLabel ? fold('tour-more', `👇 看更多<small>${moreLabel}</small>`, moreInner, true) : ''}
         <details class="tour-terms">
           <summary>📄 看完整條款與簡章原文</summary>
           ${renderQuotes(s)}
@@ -329,7 +375,7 @@ window.TOUR = (function () {
     syncIsland();
   }
 
-  function openStop(id) {
+  function openStop(id, opts = {}) {
     const f = fundOf(id);
     if (!f) return;
     window.SOUND && window.SOUND.ensureBgm();
@@ -351,6 +397,7 @@ window.TOUR = (function () {
     showDrawer(`${f.icon} ${stopNo(id)} 號站｜${f.shortName}`, sub, s ? renderStop(f, s, personaKey) : renderFallback(f));
     setTourBar(renderBar(seq, idx));
     applySheet(true);
+    if (opts.q) revealMatch(opts.q);
 
     const isl = I();
     // 導覽鏡頭拉遠一點：手機上方只剩約四成畫面，要看得到這站和旁邊幾站
@@ -407,7 +454,7 @@ window.TOUR = (function () {
       out.push(s.oneLiner);
       (s.keyNumbers || []).forEach(k => out.push(`${k.label}：${k.value}`));
       (s.plans && s.plans.rows ? s.plans.rows : []).forEach(r => out.push(`${r.name}（${r.fee}）${r.line}`));
-      [s.suits, s.notFor, s.cautions].forEach(list => (list || []).forEach(t => out.push(t)));
+      [s.suits, s.notFor, s.keyCautions, s.cautions].forEach(list => (list || []).forEach(t => out.push(t)));
       (s.stories || []).forEach(st => out.push(st.title, st.happened, st.result, st.tip));
       (s.pairs || []).forEach(p => out.push(p.why));
       Object.values(s.personaNotes || {}).forEach(t => out.push(t));
@@ -427,6 +474,22 @@ window.TOUR = (function () {
       const hit = collectSentences(id).find(t => normalize(t).includes(nq));
       return hit ? { id, snippet: hit } : null;
     }).filter(Boolean);
+  }
+
+  // 從「查基金」點進某站：找到的句子如果收在「看更多」、計畫表或完整條款裡，就展開並捲到那一句
+  const MATCH_SEL = 'li, .tour-oneliner, .tour-persona-note, .tour-keynum, .tour-plan-row, .tour-plan-note, .tour-story-head, .tour-story-line, .tour-story-tip, .tour-pair-btn, .tour-quote, .fund-doc-card p, .fund-kv, .fund-table tr';
+  function revealMatch(q) {
+    const nq = normalize(q);
+    const body = document.getElementById('explore-body');
+    if (!nq || !body) return;
+    const hit = [...body.querySelectorAll(MATCH_SEL)].find(el => normalize(el.textContent).includes(nq));
+    if (!hit) return;
+    for (let d = hit.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+    requestAnimationFrame(() => {
+      hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      hit.classList.add('tour-hit');
+      setTimeout(() => hit.classList.remove('tour-hit'), 2600);
+    });
   }
 
   function highlight(snippet, q) {
@@ -454,7 +517,7 @@ window.TOUR = (function () {
              ${results.map(r => {
                const f = fundOf(r.id);
                return `
-                 <button type="button" class="tour-result-row" style="--fund-color:${f.color}" data-tour-go="${r.id}">
+                 <button type="button" class="tour-result-row" style="--fund-color:${f.color}" data-tour-go="${r.id}" data-tour-q="${esc(query)}">
                    <strong><span class="tour-stop-pill">${stopNo(r.id)}</span>${f.icon} ${f.shortName} →</strong>
                    <span>${highlight(r.snippet, query)}</span>
                  </button>`;
@@ -558,16 +621,24 @@ window.TOUR = (function () {
 
   /* ---------------- 事件（委派，只綁一次） ---------------- */
   function handleClick(e) {
-    const t = e.target.closest('[data-persona],[data-tour-start],[data-tour-go],[data-tour-prev],[data-tour-next],[data-tour-home],[data-tour-game],[data-open-challenge],[data-tour-close],[data-tour-search],[data-tour-search-go],[data-tour-handbook],[data-tour-routecard]');
+    const t = e.target.closest('[data-persona],[data-tour-start],[data-tour-go],[data-tour-prev],[data-tour-next],[data-tour-home],[data-tour-game],[data-open-challenge],[data-tour-close],[data-tour-search],[data-tour-search-go],[data-tour-handbook],[data-tour-routecard],[data-tour-fold-close]');
     if (!t || t.disabled) return;
     window.SOUND && window.SOUND.click();
+    if (t.hasAttribute('data-tour-fold-close')) {
+      const d = t.closest('details');
+      if (d) {
+        d.open = false;
+        d.querySelector('summary')?.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
     if (t.dataset.tourSearch) { openSearch(t.dataset.tourSearch); return; }
     if (t.hasAttribute('data-tour-search-go')) { openSearch(document.getElementById('tour-search-input')?.value || ''); return; }
     if (t.hasAttribute('data-tour-handbook')) { window.HANDBOOK.open('all'); return; }
     if (t.hasAttribute('data-tour-routecard')) { openRouteCard(); return; }
     if (t.dataset.persona) { window.APP.setStageFilterUI(t.dataset.persona); return; }
     if (t.hasAttribute('data-tour-start')) { start(); return; }
-    if (t.dataset.tourGo) { openStop(t.dataset.tourGo); return; }
+    if (t.dataset.tourGo) { openStop(t.dataset.tourGo, { q: t.dataset.tourQ || '' }); return; }
     if (t.hasAttribute('data-tour-prev')) { prev(); return; }
     if (t.hasAttribute('data-tour-next')) { next(); return; }
     if (t.hasAttribute('data-tour-home')) { openHome(); return; }

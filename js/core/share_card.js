@@ -479,7 +479,8 @@ window.SHARE_CARD = (function () {
       ctx.fillText(`${f.icon} ${f.shortName}`, 138, y + 23);
       ctx.fillStyle = '#5C4B42';
       ctx.font = `500 16px ${FONT_BODY}`;
-      ctx.fillText(fitText(ctx, stop ? stop.oneLiner : f.summary, 560), 138, y + 45);
+      // 導覽的一句話可能用 \n 拆成幾行（長輩友善），路線卡只有一行：接回一句再截斷
+      ctx.fillText(fitText(ctx, stop ? stop.oneLiner.replace(/\n/g, '') : f.summary, 560), 138, y + 45);
 
       ctx.textAlign = 'right';
       ctx.fillStyle = isDone ? '#21805F' : '#9C8A7C';

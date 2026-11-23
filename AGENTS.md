@@ -1,8 +1,8 @@
 # 專案記憶與開發規範：《儲互社互助島》（cu-mutual-island）
 
-> 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新）  
+> 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新與站卡長輩友善改版）  
 > 線上網址（Cloudflare Workers Static Assets）：`https://cu-mutual-island.rock903400.workers.dev`  
-> 最新 Cloudflare 部署版本：`0c59a9ca-dbd1-4074-98c7-39af72bfbcd5`（2026-11-23，幹部路線 3 站；同日稍早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
+> 最新 Cloudflare 部署版本：`492f81e1-17dd-4546-b788-7d587ab7efe5`（2026-11-23，站卡分「第一眼＋看更多」、19 個長句拆短；同日稍早的 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5` 是幹部路線 3 站，更早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
 > GitHub 公開儲存庫：`https://github.com/rock903400-byte/cu-mutual-island`（主分支：`main`）  
 > 本檔目的：保存本專案的架構設計、8 大互助基金資料原則、多媒體資產規格、雙難度與手機長輩體驗規格、歷史踩坑修復紀錄與部署檢核流程，供後續 AI 助手（Antigravity / Gemini / Claude / Codex）直接接續維護，不需重複摸索或破壞既有體驗。
 
@@ -13,7 +13,12 @@
 - **導覽是主線**：島上 8 個基金地標＝8 站（名牌顯示站號 1～8、已逛 ✅、你在這裡 📍）。點地標、按「下一站」或走「我是誰」身分路線（👵 長輩 65+／🧑 上班族青壯／👶 爸媽幫小孩／🎖️ 理監事幹部／✨ 全部逛）逐站看（幹部路線 2026-11-23 起是 3 站：各級幹部 → 社員團體 → 團體意外）；**不計分、不計時、不會答錯**，只記「已逛 N／8 站」。
 - **5 個遊戲原封不動放在「🎮 挑戰區」**（幹部訓練、園遊會用）；難度切換只在挑戰區清單與遊戲標題，桌機頂部難度鈕已移除；集章護照移進挑戰區。
 - 每站固定結構：一句話＋3 個大數字 →（計畫一次看）→ 👍 適合誰 → 🚫 不適合誰（LP／LS 改標「這些情況不給付／這些股金不算」）→ ⚠️ 要注意 → 🎭 狀況劇 → 🔗 可以搭配（協作線）→ 📄 簡章原文＋完整條款。**不寫「缺點」**；產品內不提任何政治人物或其網站。
-- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署；同日幹部路線改成 3 站（`tour_content.js` `?v=18`），也已部署。
+- **站卡分兩層（2026-11-23 使用者決定，長輩友善）**：原本每站要在手機滑 5～7 個畫面，改成「先收起來、字不刪」。
+  - **第一眼**（不用點）：一句話、3 個大數字、📋 計畫表（收成一顆按鈕）、👍 適合誰、🚫 不適合誰、⚠️ 最要注意（`keyCautions`，跟社員權益最相關的 1～2 條）、🎭 1 個狀況劇（走身分路線時挑 `personas` 標了該身分的那個，沒有就第一個）。
+  - **👇 看更多**（一顆大按鈕，底部也有「👆 收起來」）：其他要注意（`cautions`，含每月 25 日前送名冊、受理期限、保障期間、跨社只能選一社等社務手續）、其他狀況劇、🔗 可以搭配。每一站打開都先收起來，不記上一站的展開狀態；桌機也一樣。
+  - 從「🔍 查基金」點進某站時，找到的句子如果收在看更多、計畫表或完整條款裡，會自動展開、捲到那句並標黃（`revealMatch`）。
+  - 實測（390×844 全螢幕抽屜）：第一眼 3.2～4.2 個畫面（改版前 5.1～7.5）；比原先估的 2.5～3 個多，主要是長句拆成條列後變高。
+- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署；同日幹部路線改成 3 站（`tour_content.js` `?v=18`），也已部署；同日再做站卡長輩友善改版（`tour_content.js` `?v=19`，`tour.js`／`styles.css`／`handbook.js`／`share_card.js` `?v=17`），已部署。
 
 ## 0. 給後續 Agent 的核心鐵律
 
@@ -32,6 +37,7 @@
      - 松年意外同一次意外住院，「住院日額」和「意外醫療實支實付」可以一起領。
      - 社員團體 C、D 計畫的意外住院就是每天 1,000 元、2,000 元，不會再另外加生病住院日額。
      - 大眾運輸工具指大眾搭乘、有固定路線的交通工具，例如高鐵、火車、客運、渡輪、飛機（陸上、水上與空中的特定事故金額不同）。
+   - 使用者貼來別的 AI 或網路上的說法時（使用者自己也說「未必正確」），逐條對照 7 份 PDF 和協會法規彙編再改；沒實際打開過的外部網站引用一律標「未查證」，不可直接寫進畫面。
    - 統一使用繁體中文與台灣儲蓄互助社用語（互助基金、互助費、社員、加保、續約、股金、備轉金），避免誤導為商業保險保單。
 3. **行動優先、LINE 友善與長輩無壓力介面鐵律**：
    - 主要使用情境為**手機（特別是 LINE 內建瀏覽器）社員宣導／園遊會推廣**，其次為桌機與幹部訓練。
@@ -39,6 +45,7 @@
    - 底部按鈕列固定為「🧭 導覽（n／8）｜🔍 查基金｜🎮 挑戰區｜小管家」。
    - 採「全螢幕 3D 微縮島舞台 ＋ 可捲動抽屜（桌機右側 460px／手機底部上滑）」結構，**不可將 3D 畫布與長表單垂直堆疊導致滑不動**。手機導覽用 `#side-drawer.tour-sheet` **半高抽屜**（`top: 38dvh`、不透明底色），上方露出島並用 `ISLAND_3D.setViewInset()` 把目前這站移到可見區；往下捲自動展開成全螢幕、換站回到半高；遊戲維持全高抽屜。桌機抽屜打開時 `body.drawer-open` 讓底部列與頂部列往左讓開。
    - **返回鍵**：抽屜或彈窗打開時 `history.pushState` 一筆，返回鍵依序關彈窗 → 抽屜，不可直接離站；遊戲進行中按返回先確認。
+   - **站卡第一眼要短**（見「v16 主軸」的站卡分兩層）：新增或修改內容時，第一眼的句子盡量不超過 50 字；一串數字或名單用 `\n` 換行、`・` 開頭的行排成小條列（`tour.js` 的 `fmt()`），資訊不可為了變短而刪掉。要把「看更多」裡的內容搬回第一眼，先問使用者。
    - **開場短片預設有聲**：先試有聲自動播放；被瀏覽器擋（手機、LINE 幾乎都會擋）就靜音播放並顯示大顆「🔊 點一下開聲音」，點了從頭有聲重播。
    - **挑戰區的雙難度體驗分工不可破壞**：
      - **🌱 輕鬆安心版（長輩友善）**：全面**不限時（無倒數計時）**、單局精簡為 4–5 題（第 4 攤濃縮為 5 個核心人生站＋2 格大字儀表板）、每題必備免費「💡 不確定？問小管家」白話提示鈕。
@@ -80,22 +87,23 @@
 
 ## 3. 檔案結構與關鍵模組版本
 
-### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js` 為 `?v=18`、`game_content.js` 為 `?v=17`）
+### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js` 為 `?v=19`、`game_content.js`／`tour.js`／`styles.css`／`handbook.js`／`share_card.js` 為 `?v=17`）
 
 - `index.html`：主頁面；開場 Veo 短片預設有聲（被擋改靜音＋`#btn-intro-unmute`）；極簡頂部單排 HUD（品牌＋`☀️ 島景`＋音量，桌機難度鈕已移除）；底部「🧭 導覽｜🔍 查基金｜🎮 挑戰區｜小管家」；新手引導泡泡（沒逛過才出現）；身分路線按鈕；460px 側／底抽屜（`#drawer-explore` 底部有 `#tour-bottom-bar`、標題列有 ⤢ 展開鈕）；圖鑑、護照戰績卡、路線卡 `#modal-route-card`、結算彈窗。
-- `css/styles.css`（`?v=16`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）。
+- `css/styles.css`（`?v=17`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）＋最後的「長輩友善」區塊（`.tour-fold` 可點開區塊、`.tour-more` 看更多、`.tour-sub` 小條列、`.tour-hit` 查基金標黃）。
 - `js/data/`：
-  - `tour_content.js`（`?v=18`，**嚴格 JSON**）：站序 `order`、身分路線 `personas`、關鍵字 `searchChips`、8 站 `stops`（oneLiner、keyNumbers、plans、suits、notFor／notForTitle、cautions、personaNotes、stories、pairs、quotes、pendingConfirm）。
+  - `tour_content.js`（`?v=19`，**嚴格 JSON**）：站序 `order`、身分路線 `personas`、關鍵字 `searchChips`、8 站 `stops`（oneLiner、keyNumbers、plans、suits、notFor／notForTitle、keyCautions（第一眼的最要注意）、cautions（收在看更多）、personaNotes、stories（可標 `personas: ["senior"]` 指定給哪個身分路線當第一眼的例子）、pairs、quotes、pendingConfirm）。句子裡 `\n` 換行、`・` 開頭的行排成小條列。
   - `funds_data.js`（`?v=16`）：8 大互助基金條款整理（圖鑑與站卡「完整條款」用；v16 補上幹部 A1 手術津貼 2,500）。
   - `game_content.js`（`?v=17`；v16 校正第 4 攤理賠算式等錯誤，見 §4 第 18 點）：擴充題庫（第 1 攤 24 題、第 2 攤 14 題附 3 項診斷矩陣、第 3 攤 10 經典題附紅旗線索＋`buildDynamicDetectiveCases()` 動態隨機試算、第 4 攤 7 階段雙風險事件與跨齡保單延續條件、第 5 攤 11 題＋`buildDynamicCounterQuestions()` 25 號櫃檯實戰）＋ `easyHints` / `getEasyHint()` 長輩白話提示庫。
 - `js/core/`：
   - `assets_manifest.js`（`?v=15`）：讀取 `assets/manifest.json?v=14`（共 20 個音檔槽位，含 10 句媠聲台語彩蛋；日夜配樂為 `?v=3`）。
   - `sound.js`（`?v=15`）：Web Audio 音效（含 `whoosh`、`clueFound`、`spinTick`、`confetti`）＋ 日夜配樂平滑交叉淡入淡出（`fadingOutAudios`）＋ 智慧語音閃避 ＋ `playReaction()` 多口氣輪播避免重複聽膩 ＋ **LINE WebView／行動裝置背景切離生命週期防護**（監聽 `visibilitychange`、`pagehide`、`beforeunload`、`blur`、`focus`、`pageshow`，離頁即停音並釋放、回前景平滑淡入恢復）。
   - `storage.js`（`?v=16`）：本機 `localStorage`（key `cu_mutual_carnival_v1`）雙軌進度（**15 金星 ★ ＋ 5 枚🔥幹部魔王赤章**）、6 級稱號、10 枚成就勳章，v16 加 `tour:{visited, persona, guideDismissed}`（`markVisited／getTour／setPersona／dismissGuide`；舊存檔自動補預設）；`resetAll()` 只清挑戰區、保留導覽紀錄。
-  - `handbook.js`（`?v=16`）：📖 8 大基金速查圖鑑；共用模板 `renderFundDoc(f)`、`escapeHtml()`；搜尋也會搜導覽內容。
+  - `handbook.js`（`?v=17`）：📖 8 大基金速查圖鑑；共用模板 `renderFundDoc(f)`、`escapeHtml()`；搜尋也會搜導覽內容（含 `keyCautions`）。
   - `sound.js` v16 加 `releaseVideoHold()`（短片靜音播完時解除「影片播放中」狀態）。
-  - `share_card.js`（`?v=15`）：Canvas `900×1200` 高畫質「🏝️ 儲互社互助島」戰績卡（呈現 15★＋5🔥魔王赤章＋每攤魔王緞帶），內建經 OpenCV 實掃驗證的 **33×33 原生 QR Code**（`https://cu-mutual-island.rock903400.workers.dev`），同步鏡像輸出至 `<img id="share-card-img">` 支援 LINE 長按存圖，並實作 `shareToLine()`（手機 Web Share API 原生分享／桌機自動下載 PNG 並複製文案）。v16 另加「我的互助島路線卡」`renderRoute／downloadRoute／shareRoute`（`#route-card-canvas`→`#route-card-img`，不計分）；護照戰績卡的 `render()` 維持原樣。
-- `js/tour/tour.js`（`?v=16`）：`window.TOUR`——導覽首頁（身分大按鈕、路線、關鍵字、8 站清單）、站卡、上一站／下一站／逛完畫面、查基金搜尋、路線卡、半高抽屜與 `setViewInset` 鏡頭偏移、3D 名牌同步；呼叫 `ISLAND_3D` 一律先判斷是否存在。
+  - `share_card.js`（`?v=17`；路線卡的一句話會把 `\n` 接回一行）：Canvas `900×1200` 高畫質「🏝️ 儲互社互助島」戰績卡（呈現 15★＋5🔥魔王赤章＋每攤魔王緞帶），內建經 OpenCV 實掃驗證的 **33×33 原生 QR Code**（`https://cu-mutual-island.rock903400.workers.dev`），同步鏡像輸出至 `<img id="share-card-img">` 支援 LINE 長按存圖，並實作 `shareToLine()`（手機 Web Share API 原生分享／桌機自動下載 PNG 並複製文案）。v16 另加「我的互助島路線卡」`renderRoute／downloadRoute／shareRoute`（`#route-card-canvas`→`#route-card-img`，不計分）；護照戰績卡的 `render()` 維持原樣。
+- `js/tour/tour.js`（`?v=17`）：`window.TOUR`——導覽首頁（身分大按鈕、路線、關鍵字、8 站清單）、站卡、上一站／下一站／逛完畫面、查基金搜尋、路線卡、半高抽屜與 `setViewInset` 鏡頭偏移、3D 名牌同步；呼叫 `ISLAND_3D` 一律先判斷是否存在。2026-11-23 起站卡分兩層：`fmt()`（`\n`／`・` 排版）、`fold()`（計畫表、看更多的 `<details>`）、`pickStory()`（依身分挑第一眼的狀況劇）、`revealMatch()`（查基金點進來時展開並捲到找到的句子；`openStop(id, { q })`）。
+  - 身分路線由 `tour_content.js` 的 `personas.<key>.route` 決定：導覽首頁的站數與清單、上一站／下一站順序、島上標亮（`setStageFilter`）、路線卡、逛完畫面都讀它；點不在路線裡的站，會改用全部 8 站的順序。站內 `personaNotes.<key>` 只在走該路線時顯示。改路線只要改資料，不用動程式（存檔只記身分代號，不記路線）。
 - `js/games/`（`?v=16`，玩法不變；v16 起從「🎮 挑戰區」進入；第 3 攤動態題改成先洗牌、第 5 攤小抄不寫「25 日(含)」）：
   - `game1_swipe.js`（核保快刷亭：飛卡蓋章震動＋3 連擊彩帶；輕鬆版不限時 5 題附免費提示／魔王版 80s 10 題）
   - `game2_clinic.js`（互助配對診所：問診 3 條件 ✅/❌ 處方核對回饋；輕鬆版 5 題附免費提示／魔王版 7 題隱藏細項）
@@ -161,8 +169,11 @@
     - 驗算方式：用 Node 載入 `game_content.js`，自動驗算第 4 攤每個「a×b＝c」「共 N 元」與 `shieldGain`，並把動態題各跑 2,000 次檢查有沒有重複選項。
 19. **部署與正式站測試的三個誤報**：
     - `wrangler whoami`／`deploy` 出現 `Not logged in`，但前面有 `UND_ERR_CONNECT_TIMEOUT`：是換新登入憑證時連 Cloudflare 太慢（這台電腦連線常要 4～9 秒，wrangler 10 秒就放棄），**重試一次通常就好**，不一定要重新 `wrangler login`。
-    - `wrangler deploy --dry-run` 顯示「Read 328 files」：這個數字把 `.git` 內部檔案和資料夾都算進去，不是上傳數；要確認排除清單，用 `WRANGLER_LOG=debug wrangler deploy --dry-run` 看「Ignoring asset」行（實際上傳約 50 個檔）。
+    - `wrangler deploy --dry-run` 顯示「Read 328 files」：這個數字把 `.git` 內部檔案和資料夾都算進去，不是上傳數，而且會隨 `.git` 變大（2026-11-23 已是 385）；要確認排除清單，用 `WRANGLER_LOG=debug wrangler deploy --dry-run` 看「Ignoring asset」行。網站實際約 50 個檔，每次部署只上傳有改過的檔。
     - 正式站的 404 是空白頁，Chrome 把它當錯誤頁、不能讀 `localStorage`；要在正式站測試又不弄亂使用者的瀏覽紀錄，就在首頁一載入先記下 `cu_mutual_carnival_v1`，測完寫回（`storage.js` 只在操作時存檔，不會在關頁時覆蓋）。
+20. **站卡排版的兩個坑（2026-11-23）**：
+    - `<p>` 裡不能放 `<ul>`：瀏覽器會自動把 `<p>` 斷開，排版亂掉 → 一句話、狀況劇的句子改用 `<div>`（`.tour-oneliner`、`.tour-story-line`、`.tour-story-tip`），`fmt()` 產生的小條列才放得進去。
+    - 文字多不多要用手機尺寸實測，不要只算字數：本機 Python 已裝 Playwright（含 Chromium），開 `390×844`、`is_mobile`，`TOUR.openStop(id)` 後替 `#side-drawer` 加 `tour-sheet-full`，量 `#explore-body` 的 `scrollHeight ÷ clientHeight` 就是要滑幾個畫面。用全新瀏覽設定檔，不會動到使用者的 `localStorage`。
 
 ---
 
@@ -203,6 +214,14 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 ```
 並以 Chrome（含手機 `390×844` 視窗）開啟正式網址確認 **Console 0 Errors**、頂部單排無折行與無破版。
 
+### 導覽內容的瀏覽器快速驗證（本機、正式站都適用）
+1. 首頁一載入，先把 `localStorage` 的 `cu_mutual_carnival_v1` 存進 `sessionStorage`，測完寫回，不弄亂使用者的瀏覽紀錄（見 §4 第 19 點）。
+2. 在 Console 操作：`APP.setStageFilterUI('officer')` 選身分 → `TOUR.openHome()` 看首頁 → `TOUR.openStop('group')` 開站。
+3. 讀 `#explore-title`（站名）、`#explore-sub`（路線第幾站）、`#explore-body`（站卡內容）、`#tour-bottom-bar [data-tour-next]`（「下一站」或「逛完了」），確認文字和順序。
+4. 手機：在同源頁面插一個 `390×844` 的 iframe（`transform: scale()` 縮小），確認 `scrollWidth - clientWidth` 是 0、`.float-top-bar` 高度 ≤ 44px。
+5. 用 `performance.getEntriesByType('resource')` 確認沒有 200／206／304 以外的狀態碼；改過 `?v=` 的檔要看到新版號。
+6. 站卡有改動時：確認「計畫表」「👇 看更多」預設收著；從查基金點一個收在看更多裡的關鍵字（例如「跨社」「保障期間」），要自動展開並捲到那句；手機第一眼量起來不要比 4 個多太多畫面（見 §4 第 20 點）。
+
 ---
 
 ## 6. 未來可選擴充清單（目前尚未執行，待使用者需求再啟動）
@@ -213,6 +232,8 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 - [x] v16 部署上線（2026-11-22，版本 `115c79c2-77e9-4afe-ba1c-06233d1113bf`）。
 - [x] 督導確認 4 項並寫進畫面（2026-11-23）：幹部可以同時參加社員團體、團體意外；松年住院日額和實支實付可以一起領；C、D 意外住院不再加生病住院日額；大眾運輸工具的範圍。`pendingConfirm` 10 項 → 6 項。已部署（版本 `9743828e-a03e-4153-8f0e-e5798292808c`）。
 - [x] 幹部路線加入社員團體、團體意外，從 1 站變 3 站（2026-11-23，已部署，版本 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5`）。
+- [x] 站卡長輩友善改版（2026-11-23，已部署，版本 `492f81e1-17dd-4546-b788-7d587ab7efe5`）：先收起來、字不刪；第一眼只留重點＋最要注意 1～2 條＋1 個狀況劇；第一眼超過 50 字的 19 句（加上身分路線會露出的 2 句）拆短，數字一個都沒少。手機第一眼 5.1～7.5 → 3.2～4.2 個畫面。
+- [ ] 若還想再短：每站語音導覽（見下一項）比繼續刪字更適合長輩；或把站卡頂端和抽屜標題重複的站名區塊拿掉（約省 0.1 個畫面）。
 - [ ] 剩下 6 項 `pendingConfirm`（都是簡章寫「詳見條款」的細節）由督導決定是否再問協會；回覆後改成明確寫法再部署。
 - [ ] 每站語音導覽（國語 Edge-TTS／台語媠聲，`ffmpeg` 調到約 `-18.5 dBFS`），manifest 新增 `vo_stop_<id>`。
 - [ ] 小管家角色在島上走到目前這站（沿用島民走路動畫）。

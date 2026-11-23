@@ -66,7 +66,7 @@ window.HANDBOOK = (function () {
     if (!s) return [];
     return [
       s.oneLiner,
-      ...(s.suits || []), ...(s.notFor || []), ...(s.cautions || []),
+      ...(s.suits || []), ...(s.notFor || []), ...(s.keyCautions || []), ...(s.cautions || []),
       ...((s.plans && s.plans.rows) || []).map(r => `${r.name} ${r.fee} ${r.line}`),
       ...(s.stories || []).flatMap(st => [st.title, st.happened, st.result, st.tip])
     ];

@@ -1793,3 +1793,54 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
 
 /* 路線卡彈窗 */
 .share-btn-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 12px; }
+
+/* ==================== 長輩友善（2026-11-23）：站卡第一眼＋可點開的「計畫表／看更多」 ==================== */
+.tour-sub { list-style: none; margin: 4px 0 2px; padding-left: 2px; }
+.tour-sec .tour-sub li,
+.tour-story .tour-sub li { position: relative; margin: 0 0 2px; padding-left: 1.1em; font-weight: 700; }
+.tour-sub li::before { content: '・'; position: absolute; left: 0; color: var(--fund-color); font-weight: 900; }
+.tour-story-tip .tour-sub li { font-size: inherit; line-height: 1.55; color: inherit; }
+
+.tour-fold { margin-top: 12px; }
+.tour-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 54px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid var(--fund-color);
+  font-weight: 900;
+  font-size: 1.02rem;
+  color: var(--ink-dark);
+  -webkit-tap-highlight-color: transparent;
+}
+.tour-fold > summary::-webkit-details-marker { display: none; }
+.tour-fold > summary:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.tour-fold-label { display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
+.tour-fold-label small { font-size: 0.86rem; font-weight: 700; color: var(--ink-soft); }
+.tour-fold-hint::after { content: '點開看 ▾'; font-size: 0.9rem; font-weight: 900; color: var(--fund-color); white-space: nowrap; }
+.tour-fold[open] > summary .tour-fold-hint::after { content: '收起來 ▴'; }
+.tour-fold[open] > summary { margin-bottom: 4px; }
+
+/* 看更多：比計畫表更醒目的大按鈕 */
+.tour-more > summary { background: var(--bg-warm); border-color: var(--border-warm); border-left: 7px solid var(--fund-color); min-height: 60px; font-size: 1.1rem; }
+.tour-fold-close {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  min-height: 48px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid var(--border-warm);
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--ink-mid);
+}
+
+/* 從「查基金」點進來時，標一下找到的那一句 */
+.tour-hit { outline: 3px solid #F2B705; outline-offset: 3px; border-radius: 8px; background: #FFF6CC; transition: background 0.6s; }
