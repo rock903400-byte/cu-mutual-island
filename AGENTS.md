@@ -1,8 +1,8 @@
 # 專案記憶與開發規範：《儲互社互助島》（cu-mutual-island）
 
-> 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新、站卡長輩友善改版、每站語音導覽（Gemini 台灣腔女聲）、進島前先加來福好友）  
+> 最後更新：2026-11-24（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新、站卡長輩友善改版、每站語音導覽（Gemini 台灣腔女聲）、進島前先加來福好友；2026-11-24 開場短片換成 Google Flow 重新生成的新片（原片後段高鐵一台變兩台），已部署）  
 > 線上網址（Cloudflare Workers Static Assets）：`https://cu-mutual-island.rock903400.workers.dev`  
-> 最新 Cloudflare 部署版本：`23cb3983-ba76-4f97-a91b-2c196bfc8951`（2026-11-23，分享連結與戰績卡／路線卡 QR 改成互助島 LINE 入口）；同日稍早的 `d778f10a-f8d2-4177-b53a-5e1ce6d5594a` 是進島前先加來福好友，再早的 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3` 是每站語音導覽（Gemini 女聲 `Sulafat`＋聊天說法），再早的 `492f81e1-17dd-4546-b788-7d587ab7efe5` 是站卡分「第一眼＋看更多」、19 個長句拆短，再早的 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5` 是幹部路線 3 站，更早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
+> 最新 Cloudflare 部署版本：`65578741-322e-4081-826f-ab38afca622b`（2026-11-24，開場短片換成 Google Flow 重新生成的版本）；前一版 `23cb3983-ba76-4f97-a91b-2c196bfc8951`（2026-11-23，分享連結與戰績卡／路線卡 QR 改成互助島 LINE 入口）；同日稍早的 `d778f10a-f8d2-4177-b53a-5e1ce6d5594a` 是進島前先加來福好友，再早的 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3` 是每站語音導覽（Gemini 女聲 `Sulafat`＋聊天說法），再早的 `492f81e1-17dd-4546-b788-7d587ab7efe5` 是站卡分「第一眼＋看更多」、19 個長句拆短，再早的 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5` 是幹部路線 3 站，更早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
 > GitHub 公開儲存庫：`https://github.com/rock903400-byte/cu-mutual-island`（主分支：`main`）  
 > 本檔目的：保存本專案的架構設計、8 大互助基金資料原則、多媒體資產規格、雙難度與手機長輩體驗規格、歷史踩坑修復紀錄與部署檢核流程，供後續 AI 助手（Antigravity / Gemini / Claude / Codex）直接接續維護，不需重複摸索或破壞既有體驗。
 
@@ -59,7 +59,7 @@
    - 維持 **18–20px 高對比大字**、固定底部拇指操作列（`#game-bottom-bar`）、答題解析後一律**手動點「下一題 →」**、點擊 📖 翻查圖鑑時**自動暫停計時**、答題中切換難度**必須二次確認防誤觸**。
    - **LINE 內建瀏覽器雙守則**：① 離開頁面／切回聊天室／鎖螢幕時必須立即停止所有音軌與影片；② 戰績卡與路線卡都必須同時輸出為實體 `<img>`（`#share-card-img`、`#route-card-img`）支援長按存圖與轉傳。
 4. **快取版本號同步規則**：
-   - 修改 `css/styles.css`、`js/**/*.js` 或替換 `assets/audio/*.mp3` 後，必須同步調升 `index.html` 與 `js/core/assets_manifest.js` 對應的 `?v=` 查詢參數，避免手機與 LINE WebView 吃到舊快取。
+   - 修改 `css/styles.css`、`js/**/*.js` 或替換 `assets/audio/*.mp3`、`assets/videos/*.mp4` 後，必須同步調升 `index.html` 與 `js/core/assets_manifest.js` 對應的 `?v=` 查詢參數，避免手機與 LINE WebView 吃到舊快取（影片、音檔快取一天，過期後還會先拿舊檔頂一週）。
 5. **變更後必做驗證**：
    - 本地與正式環境皆須驗證 **Console 0 Errors**、全部載入中資源為 `200`/`206`、手機 `390×844`（頂部單排無折行、零水平溢出）與桌機雙視窗無破版；若有更新音檔，須實際核對並以 `ffmpeg` 統一響度至約 `-18.5`～`-19 dBFS`。
    - 導覽內容有改動時，`python tools/check_tour_facts.py` 必須「沒有錯誤」。
@@ -99,7 +99,7 @@
 
 ## 3. 檔案結構與關鍵模組版本
 
-### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js` 為 `?v=20`、`tour.js`／`styles.css` 為 `?v=18`、`game_content.js`／`handbook.js`／`share_card.js`／`sound.js`／`assets_manifest.js` 為 `?v=17`）
+### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-24 時：`tour_content.js` 為 `?v=20`、`styles.css` 為 `?v=19`、`tour.js`／`share_card.js`／`assets_manifest.js` 為 `?v=18`、`game_content.js`／`handbook.js`／`sound.js`／`app.js` 為 `?v=17`、`laifu_gate.js` 為 `?v=1`，其餘 `?v=16`；以 `index.html` 為準）
 
 - `index.html`：主頁面；開場 Veo 短片預設有聲（被擋改靜音＋`#btn-intro-unmute`）；極簡頂部單排 HUD（品牌＋`☀️ 島景`＋音量，桌機難度鈕已移除）；底部「🧭 導覽｜🔍 查基金｜🎮 挑戰區｜小管家」；新手引導泡泡（沒逛過才出現）；身分路線按鈕；460px 側／底抽屜（`#drawer-explore` 底部有 `#tour-bottom-bar`、標題列有 ⤢ 展開鈕）；圖鑑、護照戰績卡、路線卡 `#modal-route-card`、結算彈窗。
 - `css/styles.css`（`?v=19`；檔尾加「來福好友守門」區塊 `.laifu-gate`、`.laifu-card`、LINE 綠 `.laifu-btn`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）＋「長輩友善」區塊（`.tour-fold` 可點開區塊、`.tour-more` 看更多、`.tour-sub` 小條列、`.tour-hit` 查基金標黃）＋最後的「每站語音導覽」區塊（`.tour-voice-btn`、播放中的 `.tour-voice-bars` 跳動條，`prefers-reduced-motion` 時不動）。
@@ -108,7 +108,7 @@
   - `funds_data.js`（`?v=16`）：8 大互助基金條款整理（圖鑑與站卡「完整條款」用；v16 補上幹部 A1 手術津貼 2,500）。
   - `game_content.js`（`?v=17`；v16 校正第 4 攤理賠算式等錯誤，見 §4 第 18 點）：擴充題庫（第 1 攤 24 題、第 2 攤 14 題附 3 項診斷矩陣、第 3 攤 10 經典題附紅旗線索＋`buildDynamicDetectiveCases()` 動態隨機試算、第 4 攤 7 階段雙風險事件與跨齡保單延續條件、第 5 攤 11 題＋`buildDynamicCounterQuestions()` 25 號櫃檯實戰）＋ `easyHints` / `getEasyHint()` 長輩白話提示庫。
 - `js/core/`：
-  - `assets_manifest.js`（`?v=17`）：讀取 `assets/manifest.json?v=15`（共 28 個音檔槽位，含 10 句媠聲台語彩蛋、8 站語音導覽 `stop_<站>`；日夜配樂為 `?v=3`，語音導覽為 `?v=1`）。
+  - `assets_manifest.js`（`?v=18`）：讀取 `assets/manifest.json?v=15`（共 28 個音檔槽位，含 10 句媠聲台語彩蛋、8 站語音導覽 `stop_<站>`；日夜配樂為 `?v=3`，語音導覽為 `?v=1`，開場短片為 `?v=2`）。
   - `sound.js`（`?v=17`）：Web Audio 音效（含 `whoosh`、`clueFound`、`spinTick`、`confetti`）＋ 日夜配樂平滑交叉淡入淡出（`fadingOutAudios`）＋ 智慧語音閃避 ＋ `playReaction()` 多口氣輪播避免重複聽膩 ＋ **LINE WebView／行動裝置背景切離生命週期防護**（監聽 `visibilitychange`、`pagehide`、`beforeunload`、`blur`、`focus`、`pageshow`，離頁即停音並釋放、回前景平滑淡入恢復）。
   - `storage.js`（`?v=16`）：本機 `localStorage`（key `cu_mutual_carnival_v1`）雙軌進度（**15 金星 ★ ＋ 5 枚🔥幹部魔王赤章**）、6 級稱號、10 枚成就勳章，v16 加 `tour:{visited, persona, guideDismissed}`（`markVisited／getTour／setPersona／dismissGuide`；舊存檔自動補預設）；`resetAll()` 只清挑戰區、保留導覽紀錄。
   - `handbook.js`（`?v=17`）：📖 8 大基金速查圖鑑；共用模板 `renderFundDoc(f)`、`escapeHtml()`；搜尋也會搜導覽內容（含 `keyCautions`）。
@@ -132,7 +132,7 @@
 | 類別 | 數量 | 規格與來源 |
 | --- | --- | --- |
 | 角色立繪 (`assets/images/`) | 10 檔（12 槽位映射） | 黏土微縮風格 JPG（26–40 KB／張），含 `mascot_host.jpg` 與 9 位情境角色 |
-| 開場／勝利短片 (`assets/videos/`) | 2 檔 | Google Flow Veo 3.1 Lite 720p 16:9 MP4：`intro_carnival.mp4`（2.82 MB，7.9s）、`victory_fireworks.mp4`（4.26 MB，7.9s） |
+| 開場／勝利短片 (`assets/videos/`) | 2 檔 | Google Flow 720p 16:9 MP4：`intro_carnival.mp4`（1.97 MB，8.0s；2026-11-24 用 `Omni 1.2 Flash` 重新生成，換掉 Veo 3.1 Lite 的舊片，見 §4 第 23 點）、`victory_fireworks.mp4`（Veo 3.1 Lite，4.26 MB，7.9s，同日逐 0.5 秒看過，沒有怪畫面） |
 | 台灣國語語音 (`assets/audio/vo_*.mp3`) | 7 檔 | Edge-TTS 生成（`tools/generate_audio_local.py`）：開場、勝利、5 大攤位導覽 |
 | 每站語音導覽 (`assets/audio/vo_stop_<站>.mp3`) | 8 檔 | Google Gemini 語音（Vertex AI `gemini-3.8-flash-tts`、女聲 `Sulafat`、`cmn-TW`；`tools/generate_stop_voice.py` 讀 `tour_content.js` 的 `voice`）；24kHz 單聲道 48kbps，每檔 50～69 秒、約 290～410 KB，平均 `-18.9 dB`、最大 `-0.5～-2.7 dB`（防癌那檔解碼後有 2 個取樣碰到 0 dB，聽不出來，沒重錄；工具之後改留 2 dB）。2026-11-23 第一次錄 8 站花 US$0.196（約台幣 6.3 元，3 站自動重錄） |
 | 道地台灣台語 (`assets/audio/vo_taigi_*.mp3`) | **10 檔** | 意傳科技「媠聲」生成（`tools/generate_taigi_ithuan.py`）：原始 5 句（welcome/good/reject/tamer/victory）＋ v14 新增 5 句（`combo`、`encourage`、`insider`、`spin`、`mail`），全數標準化至 `-17.9`～`-19.4 dBFS`（新 5 句經 `ffmpeg` 調至 `-18.5 dBFS`） |
@@ -153,6 +153,7 @@
     - `test_voice_guide.py [--prod]`：語音導覽 13 項（§5 第 7 點）；`--prod` 測正式站，用假的「已經是來福好友」通過守門。
     - `test_laifu_gate.py`：來福好友守門 23 項（假的 LINE，含 QR 實掃）；`test_laifu_gate_prod.py`：正式站用真的 LINE 程式 6 項（§5 第 8 點）。
     - `test_share_cards.py [--prod]`：戰績卡、路線卡 5 項（QR 實掃要是 LINE 入口、說明文字不超出框）。
+    - `test_intro_video.py [--prod]`：開場短片 11 項（2026-11-24）：讀到 `assets_manifest.js` 裡的短片網址（含 `?v=`）、長度合理、桌機有聲／手機被擋改靜音兩種情境播完都會自己關掉進島、短片請求 200／206、Console 0 錯誤。
     - `test_search_reveal.py`：查基金點進站卡，收在看更多裡的句子要展開、捲到、標黃（§5 第 6 點）。
     - `measure_first_view.py`：量手機站卡要滑幾個畫面（只量不判斷，§4 第 20 點）。
     - `check_voice_asr.py [--clip <站> <起秒> <迄秒>]`：語音轉文字反查語音導覽念對沒（要另外開 venv 裝 faster-whisper，檔頭有步驟；§4 第 21 點）。
@@ -215,6 +216,15 @@
     - QR code 用 Python `segno` 產生內嵌 SVG：`segno.make(網址, micro=False, error='Q', boost_error=True).svg_inline(border=2, scale=1, omitsize=True, svgclass='laifu-qr', lineclass='qrline', light='#fff', dark='#000')`（用這組參數重產選罷法的加好友 QR 會一字不差）。換了 LIFF 入口要重產 `QR_ISLAND`，並在瀏覽器裡把畫面上的 QR 截圖、用 OpenCV `QRCodeDetector` 實際掃一次，確認掃出來是對的網址。
     - 本機測試（`tools/test_laifu_gate.py`）：Playwright 用 `add_init_script` 先放 `window.__LAIFU_TEST`（假的 `init／isLoggedIn／getFriendship／login`），換 User-Agent 測「手機 LINE（UA 有 ` Line/`）」「手機其他瀏覽器」「電腦」三種；2026-11-23 共 23 項（含 QR 實掃、手機版面、去加好友回來自動放行、LINE 查不了要放行、從登入回來不播短片、本機不載 LINE 程式、Console 0 錯誤）。
     - 正式站測試：無頭 Chrome 沒登入 LINE，真的 LINE 程式初始化成功時狀態會是 `login`（擋下、顯示 QR）；如果是 `error`，代表 LIFF ID 或 Endpoint 設錯（使用者看不出來，因為查不了會放行），要回 LINE Developers 查。
+23. **AI 生成短片的怪畫面（2026-11-24）**：
+    - 使用者發現開場短片最後「高鐵一台拆成兩台」：Veo 原片在 5.1 秒左右，迎面開來的列車中段長出第二個車頭，前半段繼續開出畫面、後半段變成另一台車。5.0 秒以前只有一台車、正常。
+    - 處理經過：先剪到 5.0 秒當備案；使用者決定用 Google Flow 重新生成，由 Claude 用 Chrome 擴充功能在使用者的 Flow 帳號操作。第二版提示詞（`tools/google_flow_prompts.md`）生成 4 支：`Veo 3.1 - Lite` 2 支（每支 10 點）、`Omni 1.2 Flash` 720p 8 秒 2 支（每支 24 點），共 68 點。逐格檢查：Omni 兩支的列車都是 3 節、從頭到尾同一台；Lite 一支列車很長但沒分裂（畫面裡有兩座摩天輪），另一支列車開著開著從 4 節變 6 節（淘汰）。做比較頁給使用者看，使用者選 Omni 第 1 支（圓形小島遠景、鏡頭慢慢推近，莫蘭迪色低面數山丘，跟網站 3D 島最搭）。
+    - 換進網站前的處理：`ffmpeg -i Flow原檔 -map 0:v:0 -map 0:a:0 -c:v copy -af "volume=4.1dB" -c:a aac -b:a 160k -ar 48000 -ac 2 -movflags +faststart 新檔`。畫面不重新壓縮（跟原檔逐格比 PSNR 無限大＝完全相同）；聲音調大 4.1 dB，平均 -21.7 dB、最大 -4.0 dB，跟舊開場一樣（背景音樂平均 -19.3 dB）；Flow 下載的檔案夾了約 1 MB 的 `free` 空白填充，重新包裝後 3.03 MB → 1.97 MB。聲音是音樂盒旋律＋海浪，頻譜上看不到人聲（沒用耳朵聽過）。
+    - 沒採用的剪短做法（備案）：`ffmpeg -i 原片 -t 5.0 -c:v libx264 -preset slow -crf 20 -profile:v high -pix_fmt yuv420p -af "afade=t=out:st=4.4:d=0.6" -c:a aac -b:a 160k -ar 48000 -ac 2 -movflags +faststart 新檔`（跟原片前 5 秒比 SSIM 0.994，結尾聲音淡出避免爆音）。舊片留在 Git 歷史裡（`git log -- assets/videos/intro_carnival.mp4` 找得到）。
+    - Google Flow 操作（2026-11-24）：網址已改成 `https://flow.google.com/`，要用使用者的個人 Google 帳號（網址 `/u/1/`；Chrome 的預設帳號進不去 Flow）。舊片在專案「11月 22 - 00:12」。生成設定在輸入框右邊的小方塊：圖片／影片、影格／素材、16:9、模型、解析度、長度、x1～x4，下方會顯示要用幾點；剩餘點數在右上角頭像。每組結果右邊的「批次下載」會存成 `下載 (N).zip` 到使用者的「下載」資料夾。`Veo 3.1 - Fast`、`Veo 3.1 - Quality`、`Omni 1.1 Flash` 會在 2026-12-05 停用。Chrome 沒開時擴充功能連不上，要先開 Chrome。
+    - AI 看不到影片：用 ffmpeg 每 0.5 秒擷取一格拼成一張圖（`fps=2,scale=480:-1,drawtext=…%{pts\:hms}…,tile=4x4`），列車那一帶再用 `crop` 放大、每 0.25 秒一格看，可疑的地方用 `select='between(t\,起\,迄)'` 逐格看。換新影片時整支都要這樣看過一次；列車要比對車頭、車尾位置，才看得出「越開越長」這種慢慢變的怪畫面。
+    - Flow 下載的原檔內嵌 Google 的 C2PA 內容憑證（`uuid` 區塊，標示是 AI 生成）；剪輯或重新包裝後憑證本來就會失效，ffmpeg 也不會帶過去，這是正常的。
+    - 測試：`python tools/test_intro_video.py`（上線後加 `--prod`）檢查網址是新的 `?v=`、長度合理、有聲（桌機）和被擋改靜音（手機）兩種情境播完都會自己關掉進島、Console 0 錯誤；`tools/test_laifu_gate.py` 23 項照樣要過（短片關掉才檢查好友）。上線後再用 `curl` 抓正式站短片算 SHA-256，要跟本機檔案一樣。桌機尺寸不要在播放中截 3D 畫面的圖：無頭瀏覽器用軟體算圖，截一張要十幾秒，測試計時會變成「影片播了 17 秒」的假警報（影片本身 7.8 秒就播完）。
 
 ---
 
@@ -264,6 +274,7 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 6. 站卡有改動時：確認「計畫表」「👇 看更多」預設收著；從查基金點一個收在看更多裡的關鍵字（例如「跨社」「保障期間」），要自動展開並捲到那句（`python tools/test_search_reveal.py`）；手機第一眼量起來不要比 4 個多太多畫面（`python tools/measure_first_view.py`，見 §4 第 20 點）。
 7. 語音導覽有改動時（`python tools/test_voice_guide.py`，上線後加 `--prod`）：用 `--autoplay-policy=user-gesture-required` 開 Chromium，點「唸給我聽」要真的在播、按「下一站」要自動接著唸且上一站停掉、再按一下要停、自己按停後換站不自動唸、`visibilitychange`（模擬切到背景）要立刻停、靜音時按要跳提示、關抽屜要停；`vo_stop_*.mp3` 只在按下時才出現 200／206 請求。
 8. 來福好友守門有改動時：`python tools/test_laifu_gate.py`（假 LINE 23 項）；上線後 `python tools/test_laifu_gate_prod.py`：無頭 Chrome 開正式站，關掉開場短片後狀態要是 `login`（不是 `error`）、畫面上的 QR 掃得出 `https://liff.line.me/2009715141-C0OePFPc`。注意：正式站測試前要先在首頁記下 `localStorage`（見 §4 第 19 點）。
+9. 開場短片有換時：`python tools/test_intro_video.py`（11 項），上線後加 `--prod`；換影片前先照 §4 第 23 點逐格看過有沒有怪畫面。
 
 ---
 
@@ -283,6 +294,7 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 - [ ] 開場、勝利、5 攤導覽的 7 句語音（`vo_*.mp3`，Edge-TTS）改成跟語音導覽同一個 Gemini 聲音：使用者想統一再做（要花錢）。
 - [x] 進島前先加來福好友（2026-11-23，LIFF `2009715141-C0OePFPc`，做法跟選罷法一樣；本機假 LINE 測試 23 項通過；已部署，版本 `d778f10a-f8d2-4177-b53a-5e1ce6d5594a`，正式站真的 LINE 程式測 6 項、語音導覽 13 項都過）。手機 LINE 實機（登入授權、加好友、回來放行）由使用者測；AI 只能用無頭瀏覽器測到「沒登入就擋下」。
 - [x] 分享連結、戰績卡／路線卡的 QR code 改成互助島的 LINE 入口 `https://liff.line.me/2009715141-C0OePFPc`（2026-11-23 使用者同意）：在 LINE 裡點開，LINE 先問許可、加好友再開網站，不會「看完片頭跳去 LINE 登入再跳回來」。兩張卡用 Playwright 畫出來、OpenCV 實掃都掃得出 LINE 入口；已部署（版本 `23cb3983-ba76-4f97-a91b-2c196bfc8951`），正式站兩張卡 5 項、守門 6 項都過；LINE 入口網址用一般瀏覽器打開也會轉到互助島。換 LIFF 入口時，`share_card.js` 的 `GAME_URL`、`QR_MATRIX` 和 `laifu_gate.js` 的 `QR_ISLAND` 要一起重產。
+- [x] 開場短片換成 Google Flow 重新生成的版本（2026-11-24，原片 5.1 秒起高鐵一台變兩台，見 §4 第 23 點；用第二版提示詞生成 4 支，使用者選 `Omni 1.2 Flash` 第 1 支）：本機短片 11 項、守門 23 項都過；已部署（版本 `65578741-322e-4081-826f-ab38afca622b`），正式站短片 11 項、真的 LINE 程式守門 6 項都過，正式站短片跟本機檔案 SHA-256 相同。手機 LINE 實機播放由使用者試。
 - [ ] 語音導覽的台語版（意傳媠聲，`ffmpeg` 調到約 `-18.5 dBFS`）：使用者要的話再做；台語稿要另外寫成台語說法，不能直接把華語稿丟進去。
 - [ ] 小管家角色在島上走到目前這站（沿用島民走路動畫）。
 - [x] 修正 §4 第 18 點的遊戲題庫與 `funds_data.js` 錯漏（2026-11-22）。

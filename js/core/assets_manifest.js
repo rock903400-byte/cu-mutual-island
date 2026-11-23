@@ -4,7 +4,8 @@
 window.ASSETS_MANIFEST = {
   model3d: 'assets/models/carnival_island.glb',
   videos: {
-    intro: 'assets/videos/intro_carnival.mp4',
+    // 2026-11-24 換成 Google Flow 重新生成的版本（原片 5.1 秒起高鐵一台變兩台）；換影片後把 ?v= 加 1
+    intro: 'assets/videos/intro_carnival.mp4?v=2',
     victory: 'assets/videos/victory_fireworks.mp4'
   },
   images: {
