@@ -64,6 +64,12 @@
    - 本地與正式環境皆須驗證 **Console 0 Errors**、全部載入中資源為 `200`/`206`、手機 `390×844`（頂部單排無折行、零水平溢出）與桌機雙視窗無破版；若有更新音檔，須實際核對並以 `ffmpeg` 統一響度至約 `-18.5`～`-19 dBFS`。
    - 導覽內容有改動時，`python tools/check_tour_facts.py` 必須「沒有錯誤」。
    - 用 Chrome 擴充功能測 3D 時，背景視窗的動畫會被降到約 1～2 fps，鏡頭飛行要等十幾秒才到位；不要誤判成鏡頭位置寫錯（見 §4 第 15 點）。
+   - 自動測試腳本都在 `tools/`（`test_*.py`、`measure_first_view.py`、`check_voice_asr.py`，用法見 §3 與 §5）；不要再寫在 AI 暫存區，重開機就不見。
+6. **跟使用者溝通（2026-11-23 整理）**：
+   - 一律用繁體中文（台灣用語）、白話，**中間的進度回報、最後的總結也一樣**，不要寫英文；使用者看不懂英文，這天反映了兩次。技術名詞可以保留原文。
+   - 使用者說「上線」＝照 §5 部署到 Cloudflare **並**推上 GitHub；部署、推送、花錢（Gemini 語音每次呼叫都要錢）、動 LINE Developers 設定之前，要先講清楚並拿到同意。
+   - 給使用者選的東西（例如聲音），做成可以點來比較的本機網頁（放暫存資料夾、附完整路徑），建議的選項排第一。
+   - 手機 LINE 實機的流程（登入授權、加好友、播放聲音）AI 測不到，要明講「未驗證」，請使用者用手機試。
 
 ---
 
@@ -142,6 +148,14 @@
   - `build_blender_island.py`（選配：日後若匯入 `assets/models/carnival_island.glb` 可自動接管）
   - `google_flow_prompts.md`（視覺與影片提示詞紀錄）
   - `generate_stop_voice.py`（2026-11-23：每站語音導覽。讀 `tour_content.js` 的 `voice`，用 Gemini 語音（Vertex AI `gemini-3.8-flash-tts`、`Sulafat`、`cmn-TW`）錄音，再用 `gemini-3.1-flash-lite` 聽寫：稿子的數字少一個或相似度低於 0.90 就重錄，最多 3 次、留最好的；最後 ffmpeg 去頭尾靜音、平均音量調到約 `-18.5 dB`，寫到 `assets/audio/vo_stop_<站>.mp3`。`--list` 只列字數不花錢；`--stop <站>` 只重做一站；`--cap` 設這次花費上限（預設 US$0.20）。金鑰讀環境變數 `GOOGLE_TTS_API_KEY` 或 `--env` 指定的 `.env`，專案代號用 `--project` 或 `GOOGLE_TTS_PROJECT`。送出去的只有導覽稿文字和錄好的語音）
+  - 自動測試（2026-11-23 從 AI 暫存區搬進來；都開全新瀏覽設定檔，不動使用者的 `localStorage`；截圖放系統暫存資料夾 `cu_island_tests\`；全部通過 exit 0）：
+    - `testkit.py`：共用（本機網站、假的 LINE、QR 實掃、結果列印）。需要 Python 的 `playwright`（含 Chromium）、`opencv-python`、`numpy`。
+    - `test_voice_guide.py [--prod]`：語音導覽 13 項（§5 第 7 點）；`--prod` 測正式站，用假的「已經是來福好友」通過守門。
+    - `test_laifu_gate.py`：來福好友守門 23 項（假的 LINE，含 QR 實掃）；`test_laifu_gate_prod.py`：正式站用真的 LINE 程式 6 項（§5 第 8 點）。
+    - `test_share_cards.py [--prod]`：戰績卡、路線卡 5 項（QR 實掃要是 LINE 入口、說明文字不超出框）。
+    - `test_search_reveal.py`：查基金點進站卡，收在看更多裡的句子要展開、捲到、標黃（§5 第 6 點）。
+    - `measure_first_view.py`：量手機站卡要滑幾個畫面（只量不判斷，§4 第 20 點）。
+    - `check_voice_asr.py [--clip <站> <起秒> <迄秒>]`：語音轉文字反查語音導覽念對沒（要另外開 venv 裝 faster-whisper，檔頭有步驟；§4 第 21 點）。
   - `check_tour_facts.py`（v16：核對導覽內容的數字與簡章引述，只讀本機 PDF，不寫任何檔案；有錯誤時 exit 1。產品與公開文件的禁用名稱清單放在本機 `tools/brand_words.local.txt`（`*.local.txt` 已列入 `.gitignore`），名稱本身不寫進公開 repo；清單不見時只會提醒、略過該項檢查）
 
 ---
@@ -183,9 +197,10 @@
     - 用 `curl -H "Range: bytes=0-99"` 抓正式站的音檔、影片，回的是 200 整檔而不是 206（以前上線的配樂、開場短片也一樣），但 Chrome 在正式站播放、跳到結尾時有拿到 206，13 項語音測試都過；不要只憑 curl 判斷手機不能播。正式站測「播完」那一項要等音檔長度讀到（`isFinite(duration)`）再跳到結尾，不然會報 `non-finite`。
 20. **站卡排版的兩個坑（2026-11-23）**：
     - `<p>` 裡不能放 `<ul>`：瀏覽器會自動把 `<p>` 斷開，排版亂掉 → 一句話、狀況劇的句子改用 `<div>`（`.tour-oneliner`、`.tour-story-line`、`.tour-story-tip`），`fmt()` 產生的小條列才放得進去。
-    - 文字多不多要用手機尺寸實測，不要只算字數：本機 Python 已裝 Playwright（含 Chromium），開 `390×844`、`is_mobile`，`TOUR.openStop(id)` 後替 `#side-drawer` 加 `tour-sheet-full`，量 `#explore-body` 的 `scrollHeight ÷ clientHeight` 就是要滑幾個畫面。用全新瀏覽設定檔，不會動到使用者的 `localStorage`。
+    - 查基金點進站卡的標黃（`.tour-hit`）2.6 秒後會自己消失：測試要「一出現就等捲動做完（約 1 秒）再檢查」，等 2 秒以上會誤判成沒標黃（2026-11-23 踩過，`tools/test_search_reveal.py` 已改）。開場短片也可能在測試按「立即登島」前剛好播完，要用程式判斷短片還開著才按（`tools/testkit.py` 的 `enter_island`）。
+    - 文字多不多要用手機尺寸實測，不要只算字數（`tools/measure_first_view.py`）：本機 Python 已裝 Playwright（含 Chromium），開 `390×844`、`is_mobile`，`TOUR.openStop(id)` 後替 `#side-drawer` 加 `tour-sheet-full`，量 `#explore-body` 的 `scrollHeight ÷ clientHeight` 就是要滑幾個畫面。用全新瀏覽設定檔，不會動到使用者的 `localStorage`。
 21. **語音導覽怎麼確認唸對（AI 聽不到聲音）（2026-11-23）**：
-    - 用語音轉文字反查：本機 `%USERPROFILE%\.cache\huggingface\hub` 已有 faster-whisper 模型（`mobiuslabsgmbh/faster-whisper-large-v3-turbo`），在暫存資料夾開一個 venv 裝 `faster-whisper`，設 `HF_HUB_OFFLINE=1` 就不用再下載。faster-whisper 1.2.1 配新版 PyAV 會出現 `metadata_errors` 錯誤 → 先用 ffmpeg 解成 16kHz 單聲道 PCM（`-f f32le`）再丟給模型。
+    - 用語音轉文字反查（`tools/check_voice_asr.py`）：本機 `%USERPROFILE%\.cache\huggingface\hub` 已有 faster-whisper 模型（`mobiuslabsgmbh/faster-whisper-large-v3-turbo`），在暫存資料夾開一個 venv 裝 `faster-whisper`，設 `HF_HUB_OFFLINE=1` 就不用再下載。faster-whisper 1.2.1 配新版 PyAV 會出現 `metadata_errors` 錯誤 → 先用 ffmpeg 解成 16kHz 單聲道 PCM（`-f f32le`）再丟給模型。
     - 整段轉文字常會漏掉一兩句，看起來像語音少唸；把可疑的那幾秒切出來（`ffmpeg -ss … -to …`）單獨再轉一次才準。同音字（身故→申僱、核保→和保、給付→幾副）是轉文字的問題，不是唸錯。
     - 已知要避開的寫法：「簡稱 LP」的「簡」兩次都聽不到 → 改「也就是 LP」；「0%」改說「就沒有加值了」。
     - Edge-TTS 的台灣男聲 `zh-TW-YunJheNeural` 還列在清單上，但 2026-11-23 實測已經叫不出聲音（`NoAudioReceived`）；能用的台灣聲音只剩曉臻 `zh-TW-HsiaoChenNeural`、曉雨 `zh-TW-HsiaoYuNeural`（都是女聲、標準台灣華語）。`generate_audio_local.py` 裡用雲哲的 3 句如果要重做會失敗。
@@ -198,7 +213,7 @@
 22. **來福好友守門（LINE LIFF）怎麼改、怎麼測（2026-11-23）**：
     - 新開或修改 LIFF 入口要登入 LINE Developers（使用者的 LINE 帳號），密碼只能使用者自己打；2026-11-23 是使用者在自己的 Chrome 登入後，由 Claude 用 Chrome 擴充功能照選罷法的設定新增。
     - QR code 用 Python `segno` 產生內嵌 SVG：`segno.make(網址, micro=False, error='Q', boost_error=True).svg_inline(border=2, scale=1, omitsize=True, svgclass='laifu-qr', lineclass='qrline', light='#fff', dark='#000')`（用這組參數重產選罷法的加好友 QR 會一字不差）。換了 LIFF 入口要重產 `QR_ISLAND`，並在瀏覽器裡把畫面上的 QR 截圖、用 OpenCV `QRCodeDetector` 實際掃一次，確認掃出來是對的網址。
-    - 本機測試：Playwright 用 `add_init_script` 先放 `window.__LAIFU_TEST`（假的 `init／isLoggedIn／getFriendship／login`），換 User-Agent 測「手機 LINE（UA 有 ` Line/`）」「手機其他瀏覽器」「電腦」三種；2026-11-23 共 23 項（含 QR 實掃、手機版面、去加好友回來自動放行、LINE 查不了要放行、從登入回來不播短片、本機不載 LINE 程式、Console 0 錯誤）。
+    - 本機測試（`tools/test_laifu_gate.py`）：Playwright 用 `add_init_script` 先放 `window.__LAIFU_TEST`（假的 `init／isLoggedIn／getFriendship／login`），換 User-Agent 測「手機 LINE（UA 有 ` Line/`）」「手機其他瀏覽器」「電腦」三種；2026-11-23 共 23 項（含 QR 實掃、手機版面、去加好友回來自動放行、LINE 查不了要放行、從登入回來不播短片、本機不載 LINE 程式、Console 0 錯誤）。
     - 正式站測試：無頭 Chrome 沒登入 LINE，真的 LINE 程式初始化成功時狀態會是 `login`（擋下、顯示 QR）；如果是 `error`，代表 LIFF ID 或 Endpoint 設錯（使用者看不出來，因為查不了會放行），要回 LINE Developers 查。
 
 ---
@@ -246,9 +261,9 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 3. 讀 `#explore-title`（站名）、`#explore-sub`（路線第幾站）、`#explore-body`（站卡內容）、`#tour-bottom-bar [data-tour-next]`（「下一站」或「逛完了」），確認文字和順序。
 4. 手機：在同源頁面插一個 `390×844` 的 iframe（`transform: scale()` 縮小），確認 `scrollWidth - clientWidth` 是 0、`.float-top-bar` 高度 ≤ 44px。
 5. 用 `performance.getEntriesByType('resource')` 確認沒有 200／206／304 以外的狀態碼；改過 `?v=` 的檔要看到新版號。
-6. 站卡有改動時：確認「計畫表」「👇 看更多」預設收著；從查基金點一個收在看更多裡的關鍵字（例如「跨社」「保障期間」），要自動展開並捲到那句；手機第一眼量起來不要比 4 個多太多畫面（見 §4 第 20 點）。
-7. 語音導覽有改動時：用 `--autoplay-policy=user-gesture-required` 開 Chromium，點「唸給我聽」要真的在播、按「下一站」要自動接著唸且上一站停掉、再按一下要停、自己按停後換站不自動唸、`visibilitychange`（模擬切到背景）要立刻停、靜音時按要跳提示、關抽屜要停；`vo_stop_*.mp3` 只在按下時才出現 200／206 請求。
-8. 來福好友守門有改動時：照 §4 第 22 點跑假 LINE 的測試；上線後用無頭 Chrome 開正式站，關掉開場短片後狀態要是 `login`（不是 `error`）、畫面上的 QR 掃得出 `https://liff.line.me/2009715141-C0OePFPc`。注意：正式站測試前要先在首頁記下 `localStorage`（見 §4 第 19 點）。
+6. 站卡有改動時：確認「計畫表」「👇 看更多」預設收著；從查基金點一個收在看更多裡的關鍵字（例如「跨社」「保障期間」），要自動展開並捲到那句（`python tools/test_search_reveal.py`）；手機第一眼量起來不要比 4 個多太多畫面（`python tools/measure_first_view.py`，見 §4 第 20 點）。
+7. 語音導覽有改動時（`python tools/test_voice_guide.py`，上線後加 `--prod`）：用 `--autoplay-policy=user-gesture-required` 開 Chromium，點「唸給我聽」要真的在播、按「下一站」要自動接著唸且上一站停掉、再按一下要停、自己按停後換站不自動唸、`visibilitychange`（模擬切到背景）要立刻停、靜音時按要跳提示、關抽屜要停；`vo_stop_*.mp3` 只在按下時才出現 200／206 請求。
+8. 來福好友守門有改動時：`python tools/test_laifu_gate.py`（假 LINE 23 項）；上線後 `python tools/test_laifu_gate_prod.py`：無頭 Chrome 開正式站，關掉開場短片後狀態要是 `login`（不是 `error`）、畫面上的 QR 掃得出 `https://liff.line.me/2009715141-C0OePFPc`。注意：正式站測試前要先在首頁記下 `localStorage`（見 §4 第 19 點）。
 
 ---
 
