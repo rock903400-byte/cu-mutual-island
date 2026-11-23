@@ -2,7 +2,7 @@
 
 > 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新）  
 > 線上網址（Cloudflare Workers Static Assets）：`https://cu-mutual-island.rock903400.workers.dev`  
-> 最新 Cloudflare 部署版本：`9743828e-a03e-4153-8f0e-e5798292808c`（2026-11-23，v16 內容更新；前一版 `115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版，v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
+> 最新 Cloudflare 部署版本：`0c59a9ca-dbd1-4074-98c7-39af72bfbcd5`（2026-11-23，幹部路線 3 站；同日稍早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
 > GitHub 公開儲存庫：`https://github.com/rock903400-byte/cu-mutual-island`（主分支：`main`）  
 > 本檔目的：保存本專案的架構設計、8 大互助基金資料原則、多媒體資產規格、雙難度與手機長輩體驗規格、歷史踩坑修復紀錄與部署檢核流程，供後續 AI 助手（Antigravity / Gemini / Claude / Codex）直接接續維護，不需重複摸索或破壞既有體驗。
 
@@ -10,10 +10,10 @@
 
 ## ⭐ v16 主軸：導覽（2026-11-22 使用者決定）
 
-- **導覽是主線**：島上 8 個基金地標＝8 站（名牌顯示站號 1～8、已逛 ✅、你在這裡 📍）。點地標、按「下一站」或走「我是誰」身分路線（👵 長輩 65+／🧑 上班族青壯／👶 爸媽幫小孩／🎖️ 理監事幹部／✨ 全部逛）逐站看；**不計分、不計時、不會答錯**，只記「已逛 N／8 站」。
+- **導覽是主線**：島上 8 個基金地標＝8 站（名牌顯示站號 1～8、已逛 ✅、你在這裡 📍）。點地標、按「下一站」或走「我是誰」身分路線（👵 長輩 65+／🧑 上班族青壯／👶 爸媽幫小孩／🎖️ 理監事幹部／✨ 全部逛）逐站看（幹部路線 2026-11-23 起是 3 站：各級幹部 → 社員團體 → 團體意外）；**不計分、不計時、不會答錯**，只記「已逛 N／8 站」。
 - **5 個遊戲原封不動放在「🎮 挑戰區」**（幹部訓練、園遊會用）；難度切換只在挑戰區清單與遊戲標題，桌機頂部難度鈕已移除；集章護照移進挑戰區。
 - 每站固定結構：一句話＋3 個大數字 →（計畫一次看）→ 👍 適合誰 → 🚫 不適合誰（LP／LS 改標「這些情況不給付／這些股金不算」）→ ⚠️ 要注意 → 🎭 狀況劇 → 🔗 可以搭配（協作線）→ 📄 簡章原文＋完整條款。**不寫「缺點」**；產品內不提任何政治人物或其網站。
-- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署。
+- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署；同日幹部路線改成 3 站（`tour_content.js` `?v=18`），也已部署。
 
 ## 0. 給後續 Agent 的核心鐵律
 
@@ -80,12 +80,12 @@
 
 ## 3. 檔案結構與關鍵模組版本
 
-### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js`、`game_content.js` 為 `?v=17`）
+### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js` 為 `?v=18`、`game_content.js` 為 `?v=17`）
 
 - `index.html`：主頁面；開場 Veo 短片預設有聲（被擋改靜音＋`#btn-intro-unmute`）；極簡頂部單排 HUD（品牌＋`☀️ 島景`＋音量，桌機難度鈕已移除）；底部「🧭 導覽｜🔍 查基金｜🎮 挑戰區｜小管家」；新手引導泡泡（沒逛過才出現）；身分路線按鈕；460px 側／底抽屜（`#drawer-explore` 底部有 `#tour-bottom-bar`、標題列有 ⤢ 展開鈕）；圖鑑、護照戰績卡、路線卡 `#modal-route-card`、結算彈窗。
 - `css/styles.css`（`?v=16`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）。
 - `js/data/`：
-  - `tour_content.js`（`?v=17`，**嚴格 JSON**）：站序 `order`、身分路線 `personas`、關鍵字 `searchChips`、8 站 `stops`（oneLiner、keyNumbers、plans、suits、notFor／notForTitle、cautions、personaNotes、stories、pairs、quotes、pendingConfirm）。
+  - `tour_content.js`（`?v=18`，**嚴格 JSON**）：站序 `order`、身分路線 `personas`、關鍵字 `searchChips`、8 站 `stops`（oneLiner、keyNumbers、plans、suits、notFor／notForTitle、cautions、personaNotes、stories、pairs、quotes、pendingConfirm）。
   - `funds_data.js`（`?v=16`）：8 大互助基金條款整理（圖鑑與站卡「完整條款」用；v16 補上幹部 A1 手術津貼 2,500）。
   - `game_content.js`（`?v=17`；v16 校正第 4 攤理賠算式等錯誤，見 §4 第 18 點）：擴充題庫（第 1 攤 24 題、第 2 攤 14 題附 3 項診斷矩陣、第 3 攤 10 經典題附紅旗線索＋`buildDynamicDetectiveCases()` 動態隨機試算、第 4 攤 7 階段雙風險事件與跨齡保單延續條件、第 5 攤 11 題＋`buildDynamicCounterQuestions()` 25 號櫃檯實戰）＋ `easyHints` / `getEasyHint()` 長輩白話提示庫。
 - `js/core/`：
@@ -212,6 +212,7 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 - [x] 第一輪校稿（2026-11-22）：LP／LS 最高給付寫法、LS 互助費由社繳、社員團體 E 計畫給付項目、重大疾病 65～70 歲照簡章原文、幹部併保改「請先確認」；`pendingConfirm` 15 項 → 10 項。
 - [x] v16 部署上線（2026-11-22，版本 `115c79c2-77e9-4afe-ba1c-06233d1113bf`）。
 - [x] 督導確認 4 項並寫進畫面（2026-11-23）：幹部可以同時參加社員團體、團體意外；松年住院日額和實支實付可以一起領；C、D 意外住院不再加生病住院日額；大眾運輸工具的範圍。`pendingConfirm` 10 項 → 6 項。已部署（版本 `9743828e-a03e-4153-8f0e-e5798292808c`）。
+- [x] 幹部路線加入社員團體、團體意外，從 1 站變 3 站（2026-11-23，已部署，版本 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5`）。
 - [ ] 剩下 6 項 `pendingConfirm`（都是簡章寫「詳見條款」的細節）由督導決定是否再問協會；回覆後改成明確寫法再部署。
 - [ ] 每站語音導覽（國語 Edge-TTS／台語媠聲，`ffmpeg` 調到約 `-18.5 dBFS`），manifest 新增 `vo_stop_<id>`。
 - [ ] 小管家角色在島上走到目前這站（沿用島民走路動畫）。
