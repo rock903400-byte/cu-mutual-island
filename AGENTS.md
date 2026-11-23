@@ -1,8 +1,8 @@
 # 專案記憶與開發規範：《儲互社互助島》（cu-mutual-island）
 
-> 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新、站卡長輩友善改版、每站語音導覽（Gemini 台灣腔女聲））  
+> 最後更新：2026-11-23（Asia/Taipei；線上是 v16 導覽版，含 2026-11-23 內容更新、站卡長輩友善改版、每站語音導覽（Gemini 台灣腔女聲）、進島前先加來福好友）  
 > 線上網址（Cloudflare Workers Static Assets）：`https://cu-mutual-island.rock903400.workers.dev`  
-> 最新 Cloudflare 部署版本：`51c4db91-7c8a-42d0-9f9e-45dbd233fdf3`（2026-11-23，每站語音導覽，Gemini 女聲 `Sulafat`＋聊天說法）；同日稍早的 `492f81e1-17dd-4546-b788-7d587ab7efe5` 是站卡分「第一眼＋看更多」、19 個長句拆短，再早的 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5` 是幹部路線 3 站，更早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
+> 最新 Cloudflare 部署版本：`d778f10a-f8d2-4177-b53a-5e1ce6d5594a`（2026-11-23，進島前先加來福好友）；同日稍早的 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3` 是每站語音導覽（Gemini 女聲 `Sulafat`＋聊天說法），再早的 `492f81e1-17dd-4546-b788-7d587ab7efe5` 是站卡分「第一眼＋看更多」、19 個長句拆短，再早的 `0c59a9ca-dbd1-4074-98c7-39af72bfbcd5` 是幹部路線 3 站，更早的 `9743828e-a03e-4153-8f0e-e5798292808c` 是 4 項確認的內容更新；`115c79c2-77e9-4afe-ba1c-06233d1113bf` 是 2026-11-22 的 v16 首版；v15 為 `6ea2ae8a-182a-4f00-b572-5591feba7cfa`）  
 > GitHub 公開儲存庫：`https://github.com/rock903400-byte/cu-mutual-island`（主分支：`main`）  
 > 本檔目的：保存本專案的架構設計、8 大互助基金資料原則、多媒體資產規格、雙難度與手機長輩體驗規格、歷史踩坑修復紀錄與部署檢核流程，供後續 AI 助手（Antigravity / Gemini / Claude / Codex）直接接續維護，不需重複摸索或破壞既有體驗。
 
@@ -19,7 +19,10 @@
   - 從「🔍 查基金」點進某站時，找到的句子如果收在看更多、計畫表或完整條款裡，會自動展開、捲到那句並標黃（`revealMatch`）。
   - 實測（390×844 全螢幕抽屜）：第一眼 3.2～4.2 個畫面（改版前 5.1～7.5）；比原先估的 2.5～3 個多，主要是長句拆成條列後變高。
 - **每站語音導覽（2026-11-23 使用者要求「台灣腔」）**：站名下方一顆「🔊 唸給我聽」大按鈕，唸約 1 分鐘的導覽稿（`tour_content.js` 每站的 `voice`，聊天說法、只放少量「喔、啊、啦」）。聲音是 **Google Gemini 語音**（Vertex AI `gemini-3.8-flash-tts`、台灣華語 `cmn-TW`、女聲 `Sulafat`，提示詞交代「台灣人平常的口音、慢慢講給長輩聽、不要播報腔」）。一開始用 Edge-TTS 曉臻 `zh-TW-HsiaoChenNeural`，使用者聽了問「這是台灣腔嗎??」；做了 8 種試聽（微軟 4 種、台語 1 種、Gemini 3 種）比較後，使用者照建議選 Gemini 女聲＋聊天說法。網站開場、挑戰區的 7 句語音還是 Edge 的聲音，要統一先問使用者（要花錢）。按過一次就進入「語音導覽模式」：按下一站／上一站／可以搭配，會自動接著唸；自己按停、靜音、切到背景（LINE 切聊天室、鎖螢幕）、回清單、關抽屜就結束模式。**沒按過不會自己出聲**。音檔只在按下時才下載。
-- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署；同日幹部路線改成 3 站（`tour_content.js` `?v=18`），也已部署；同日再做站卡長輩友善改版（`tour_content.js` `?v=19`，`tour.js`／`styles.css`／`handbook.js`／`share_card.js` `?v=17`），已部署；同日最後加上每站語音導覽（`tour_content.js` `?v=20`、`tour.js`／`styles.css` `?v=18`、`sound.js`／`assets_manifest.js` `?v=17`、`manifest.json?v=15`、`stop_*` 音檔 `?v=1`），已部署（版本 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3`）。
+- **進島前先加來福好友（2026-11-23 使用者決定：一打開網站就要先加，跟選罷法、專職研習一樣）**：來福＝LINE 官方帳號 `@721byaqh`「儲蓄互助社｜生活圈」。開場短片照播，短片關掉（或沒有短片）時，LINE 確認不是好友就整頁擋住（沒有關閉鈕，導覽和挑戰區都看不到）；是好友、或 LINE 查不了（出錯、逾時）就直接進島，不會把大家卡在門口。只在正式網址檢查，本機不檢查。網站不存、不傳任何 LINE 個人資料（只看 `getFriendship()` 的 `friendFlag`）。
+  - 互助島專用 LINE 入口：LIFF `2009715141-C0OePFPc`（`https://liff.line.me/2009715141-C0OePFPc`），在 LINE Developers →「儲互社」LINE 登入頻道 `2009715141` → LIFF「儲互社互助島」：Size Full、Endpoint `https://cu-mutual-island.rock903400.workers.dev/`、Scope 只有 profile、Add friend option On (aggressive)、Scan QR 關。頻道的 Linked LINE Official Account 是 `@721byaqh`，查好友要靠這個連結（同頻道還有選罷法 `LrJWnlix`、專職研習 `BTlvMKPu`，不要動到）。
+  - 手機 LINE 裡：沒登入就自動請 LINE 登入（第一次跳授權畫面，按「許可」後會跳加好友畫面）；不是好友顯示「➕ 加入來福」，去加完回到網站會自動再確認。電腦：顯示 QR code 請他用手機 LINE 掃（掃了是互助島的 LINE 入口，或來福的加好友頁），另有「在這台電腦登入 LINE」。手機其他瀏覽器：「用 LINE 打開互助島」。從 LINE 登入回來（10 分鐘內）不再播開場短片。
+- 目前狀態：8 站內容已完成並通過 `tools/check_tour_facts.py`；2026-11-22 第一輪校稿、部署上線。2026-11-23 督導確認 4 項業務事實（見 §0 第 2 點）並寫進畫面，`pendingConfirm` 剩 6 項（都是簡章寫「詳見條款」的細節）；這次修改（`tour_content.js`、`game_content.js` 註解，版號 `?v=17`）已在 2026-11-23 部署；同日幹部路線改成 3 站（`tour_content.js` `?v=18`），也已部署；同日再做站卡長輩友善改版（`tour_content.js` `?v=19`，`tour.js`／`styles.css`／`handbook.js`／`share_card.js` `?v=17`），已部署；同日最後加上每站語音導覽（`tour_content.js` `?v=20`、`tour.js`／`styles.css` `?v=18`、`sound.js`／`assets_manifest.js` `?v=17`、`manifest.json?v=15`、`stop_*` 音檔 `?v=1`），已部署（版本 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3`）；同日再加進島前先加來福好友（`laifu_gate.js` `?v=1`、`app.js` `?v=17`、`styles.css` `?v=19`），已部署（版本 `d778f10a-f8d2-4177-b53a-5e1ce6d5594a`）。
 
 ## 0. 給後續 Agent 的核心鐵律
 
@@ -42,6 +45,7 @@
    - 統一使用繁體中文與台灣儲蓄互助社用語（互助基金、互助費、社員、加保、續約、股金、備轉金），避免誤導為商業保險保單。
 3. **行動優先、LINE 友善與長輩無壓力介面鐵律**：
    - 主要使用情境為**手機（特別是 LINE 內建瀏覽器）社員宣導／園遊會推廣**，其次為桌機與幹部訓練。
+   - **來福好友守門是使用者決定的**（2026-11-23，見「v16 主軸」）：雖然多一道關卡，不可自行拿掉、改成可略過、或只擋挑戰區；要改先問使用者。改 `laifu_gate.js` 一律維持「確定不是好友才擋，查不了就放行」。
    - **手機首屏必須維持極簡單排**：頂部僅留 1 排（`🏝️ 儲互社互助島` ＋ `☀️ 島景` ＋ `🔊`，高度 ≤ 44px）；「我是誰」身分路線按鈕（`.stage-chip[data-stage]`，key：`all/senior/adult/kids/officer`）在手機收進 `☀️ 島景` 彈窗、桌機在底部；彈窗打開時頂部列加 `.popover-open` 疊到抽屜上面。
    - 底部按鈕列固定為「🧭 導覽（n／8）｜🔍 查基金｜🎮 挑戰區｜小管家」。
    - 採「全螢幕 3D 微縮島舞台 ＋ 可捲動抽屜（桌機右側 460px／手機底部上滑）」結構，**不可將 3D 畫布與長表單垂直堆疊導致滑不動**。手機導覽用 `#side-drawer.tour-sheet` **半高抽屜**（`top: 38dvh`、不透明底色），上方露出島並用 `ISLAND_3D.setViewInset()` 把目前這站移到可見區；往下捲自動展開成全螢幕、換站回到半高；遊戲維持全高抽屜。桌機抽屜打開時 `body.drawer-open` 讓底部列與頂部列往左讓開。
@@ -92,7 +96,7 @@
 ### 公開部署檔案（v16 新增 `js/data/tour_content.js`、`js/tour/tour.js`；資源快取版號 `?v=16`，2026-11-23 起 `tour_content.js` 為 `?v=20`、`tour.js`／`styles.css` 為 `?v=18`、`game_content.js`／`handbook.js`／`share_card.js`／`sound.js`／`assets_manifest.js` 為 `?v=17`）
 
 - `index.html`：主頁面；開場 Veo 短片預設有聲（被擋改靜音＋`#btn-intro-unmute`）；極簡頂部單排 HUD（品牌＋`☀️ 島景`＋音量，桌機難度鈕已移除）；底部「🧭 導覽｜🔍 查基金｜🎮 挑戰區｜小管家」；新手引導泡泡（沒逛過才出現）；身分路線按鈕；460px 側／底抽屜（`#drawer-explore` 底部有 `#tour-bottom-bar`、標題列有 ⤢ 展開鈕）；圖鑑、護照戰績卡、路線卡 `#modal-route-card`、結算彈窗。
-- `css/styles.css`（`?v=18`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）＋「長輩友善」區塊（`.tour-fold` 可點開區塊、`.tour-more` 看更多、`.tour-sub` 小條列、`.tour-hit` 查基金標黃）＋最後的「每站語音導覽」區塊（`.tour-voice-btn`、播放中的 `.tour-voice-bars` 跳動條，`prefers-reduced-motion` 時不動）。
+- `css/styles.css`（`?v=19`；檔尾加「來福好友守門」區塊 `.laifu-gate`、`.laifu-card`、LINE 綠 `.laifu-btn`）：v15 全部樣式＋檔尾「v16 互助島導覽」區塊（半高抽屜、站卡大字、身分按鈕、計畫表、關鍵字按鈕、搜尋結果、上一站／下一站列、開聲音按鈕）＋「長輩友善」區塊（`.tour-fold` 可點開區塊、`.tour-more` 看更多、`.tour-sub` 小條列、`.tour-hit` 查基金標黃）＋最後的「每站語音導覽」區塊（`.tour-voice-btn`、播放中的 `.tour-voice-bars` 跳動條，`prefers-reduced-motion` 時不動）。
 - `js/data/`：
   - `tour_content.js`（`?v=20`，**嚴格 JSON**）：站序 `order`、身分路線 `personas`、關鍵字 `searchChips`、8 站 `stops`（oneLiner、voice（語音導覽稿）、keyNumbers、plans、suits、notFor／notForTitle、keyCautions（第一眼的最要注意）、cautions（收在看更多）、personaNotes、stories（可標 `personas: ["senior"]` 指定給哪個身分路線當第一眼的例子）、pairs、quotes、pendingConfirm）。句子裡 `\n` 換行、`・` 開頭的行排成小條列。
   - `funds_data.js`（`?v=16`）：8 大互助基金條款整理（圖鑑與站卡「完整條款」用；v16 補上幹部 A1 手術津貼 2,500）。
@@ -103,6 +107,7 @@
   - `storage.js`（`?v=16`）：本機 `localStorage`（key `cu_mutual_carnival_v1`）雙軌進度（**15 金星 ★ ＋ 5 枚🔥幹部魔王赤章**）、6 級稱號、10 枚成就勳章，v16 加 `tour:{visited, persona, guideDismissed}`（`markVisited／getTour／setPersona／dismissGuide`；舊存檔自動補預設）；`resetAll()` 只清挑戰區、保留導覽紀錄。
   - `handbook.js`（`?v=17`）：📖 8 大基金速查圖鑑；共用模板 `renderFundDoc(f)`、`escapeHtml()`；搜尋也會搜導覽內容（含 `keyCautions`）。
   - `sound.js` v16 加 `releaseVideoHold()`（短片靜音播完時解除「影片播放中」狀態）；`?v=17` 起 `playVoice(key, { onDone })` 會在播完、被停（離頁、靜音、換別句）、載入失敗、被瀏覽器擋下時回報一次（`ended／stopped／error／blocked`），並對外提供 `stopVoice()`、`isVoicePlaying()`。
+  - `laifu_gate.js`（`?v=1`，2026-11-23）：`window.LAIFU_GATE`，進島前確認是來福好友（`init()` 在 `app.js` 一開始呼叫、看短片時在背景問 LINE；`require()` 在短片關掉或沒有短片時呼叫，不是好友就打開 `#laifu-gate`）。狀態 `off／loading／login／notFriend／friend／error`，只有 `login`、`notFriend` 會擋。LINE 程式（`static.line-scdn.net/liff/edge/2/sdk.js`）只在正式網址才載。`QR_ISLAND`（互助島 LINE 入口）、`QR_ADD`（加來福好友，跟選罷法同一個）是內嵌 SVG。測試用 `window.__LAIFU_TEST = { liff: 假的 LINE }`。圖 `assets/images/laifu_dog.jpg`（從選罷法複製，256×256、10 KB）。
   - `share_card.js`（`?v=17`；路線卡的一句話會把 `\n` 接回一行）：Canvas `900×1200` 高畫質「🏝️ 儲互社互助島」戰績卡（呈現 15★＋5🔥魔王赤章＋每攤魔王緞帶），內建經 OpenCV 實掃驗證的 **33×33 原生 QR Code**（`https://cu-mutual-island.rock903400.workers.dev`），同步鏡像輸出至 `<img id="share-card-img">` 支援 LINE 長按存圖，並實作 `shareToLine()`（手機 Web Share API 原生分享／桌機自動下載 PNG 並複製文案）。v16 另加「我的互助島路線卡」`renderRoute／downloadRoute／shareRoute`（`#route-card-canvas`→`#route-card-img`，不計分）；護照戰績卡的 `render()` 維持原樣。
 - `js/tour/tour.js`（`?v=18`；語音導覽：`renderVoiceBtn／playStopVoice／stopNarration／toggleVoice`，`openStop(id, { rerender: true })` 重畫同一站時不打斷語音）：`window.TOUR`——導覽首頁（身分大按鈕、路線、關鍵字、8 站清單）、站卡、上一站／下一站／逛完畫面、查基金搜尋、路線卡、半高抽屜與 `setViewInset` 鏡頭偏移、3D 名牌同步；呼叫 `ISLAND_3D` 一律先判斷是否存在。2026-11-23 起站卡分兩層：`fmt()`（`\n`／`・` 排版）、`fold()`（計畫表、看更多的 `<details>`）、`pickStory()`（依身分挑第一眼的狀況劇）、`revealMatch()`（查基金點進來時展開並捲到找到的句子；`openStop(id, { q })`）。
   - 身分路線由 `tour_content.js` 的 `personas.<key>.route` 決定：導覽首頁的站數與清單、上一站／下一站順序、島上標亮（`setStageFilter`）、路線卡、逛完畫面都讀它；點不在路線裡的站，會改用全部 8 站的順序。站內 `personaNotes.<key>` 只在走該路線時顯示。改路線只要改資料，不用動程式（存檔只記身分代號，不記路線）。
@@ -112,7 +117,7 @@
   - `game3_detective.js`（理賠神算偵探社：時間軸點紅旗線索賺 `+30` 眼力分解鎖公式＋動態隨機數字；輕鬆版 4 題附白話幫算提示／魔王版 6 題）
   - `game4_life85.js`（85 歲人生摩天輪：真・SVG 旋轉命運輪盤＋撥片音效＋風險雷達＋跨齡保單資格鎖定如 63 歲未續防癌一鎖定 72 歲計畫三、72 歲未保松年鎖定 82 歲續約、63 歲退股拉低 LS 100% 水位；輕鬆版 5 核心站＋2 格大字儀表板＋免費建議／魔王版完整 7 站＋4 格儀表板）
   - `game5_calendar.js`（25 號送件大亂鬥：信封滑入＆投遞動畫＋可折疊開保月口訣小抄＋25 號櫃檯實戰題；輕鬆版不限時 5 封附提示／魔王版 85s 11 封含年度最後截止日）
-- `js/app.js`（`?v=16`）：全站狀態控制；`openFundCard／openHubInfo` 轉給 TOUR；`setStageFilterUI()` 同步兩組身分按鈕與說明列；挑戰區清單（難度條、護照入口）；遊戲中切換難度二次確認；返回鍵層級管理（`LAYER_IDS`＋`MutationObserver`＋`popstate`）；開場短片有聲／開聲音按鈕；`file://` 與 3D 失敗時的 2D 導覽（8 站＋挑戰區）。
+- `js/app.js`（`?v=17`；2026-11-23 起一開始呼叫 `LAIFU_GATE.init()`，開場短片關掉或沒有短片時呼叫 `LAIFU_GATE.require()`，從 LINE 登入回來不播短片）：全站狀態控制；`openFundCard／openHubInfo` 轉給 TOUR；`setStageFilterUI()` 同步兩組身分按鈕與說明列；挑戰區清單（難度條、護照入口）；遊戲中切換難度二次確認；返回鍵層級管理（`LAYER_IDS`＋`MutationObserver`＋`popstate`）；開場短片有聲／開聲音按鈕；`file://` 與 3D 失敗時的 2D 導覽（8 站＋挑戰區）。
 - `js/scene/island3d.js`（`?v=16`，module）：Three.js 19 格微縮島、GPU 波浪、手機陰影降載；**導覽站名牌**（站號 1～8、已逛 ✅、你在這裡 📍，`roundRectPath` 畫圓角）＋未逛站呼吸光圈；遊戲名牌降為白牌「🎮 名稱 ★」；`focusById(id, onArrive, {distance})`、`setActiveStop`、`setTourLinks`、`syncTour`、`setViewInset`（`camera.setViewOffset` 平滑偏移）、`setStageFilter(key, ids)`；`pulseBooth`、`triggerFireworks`、熱氣球彩蛋照舊。module 載入失敗由 `onerror` 切 2D。
 - `_headers`：Cloudflare Workers Static Assets 快取與安全標頭（`/`、`/index.html`、`/assets/manifest.json` 為 `max-age=0, must-revalidate`；CSS/JS `max-age=3600`；圖片／音檔／影片 `max-age=86400, stale-while-revalidate=604800`；全域 `X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`）。
 
@@ -190,6 +195,11 @@
     - 金鑰：使用者的 Gemini 語音金鑰在本機另一個專案 `..\專職研習\.env` 的 `GOOGLE_TTS_API_KEY`，專案代號在同一個資料夾 `build_voice_clips.py` 的 `PROJECT`。不要複製進這個 repo（公開）；`.gitignore`、`.assetsignore` 已排除 `.env`。跨專案拿金鑰來用會被 Claude Code 權限系統擋下，要使用者明確同意。
     - 2026-11-23 核對 Gemini 版時的誤報：faster-whisper 在 3 號站結尾多寫了一串外文亂碼、4 號站結尾寫成「好嗎」，用 `word_timestamps=True` 查，最後一個字後面都只剩 0.3～0.5 秒，是轉文字的幻覺，不是語音多出雜音。兩個聽寫程式意見不一樣的地方（D 計畫聽成「第一計畫」、聲明書聽成「宣告書」、通過聽成「透過」、8 號站多了「我也」），切成幾秒的小段請使用者用耳朵確認。
     - 做比較試聽：同一段稿、各家聲音都錄一次，平均音量拉成一樣（`volumedetect` 調到 -19 dB），做成一頁 HTML 放暫存資料夾給使用者聽；不要只用文字描述讓使用者選。
+22. **來福好友守門（LINE LIFF）怎麼改、怎麼測（2026-11-23）**：
+    - 新開或修改 LIFF 入口要登入 LINE Developers（使用者的 LINE 帳號），密碼只能使用者自己打；2026-11-23 是使用者在自己的 Chrome 登入後，由 Claude 用 Chrome 擴充功能照選罷法的設定新增。
+    - QR code 用 Python `segno` 產生內嵌 SVG：`segno.make(網址, micro=False, error='Q', boost_error=True).svg_inline(border=2, scale=1, omitsize=True, svgclass='laifu-qr', lineclass='qrline', light='#fff', dark='#000')`（用這組參數重產選罷法的加好友 QR 會一字不差）。換了 LIFF 入口要重產 `QR_ISLAND`，並在瀏覽器裡把畫面上的 QR 截圖、用 OpenCV `QRCodeDetector` 實際掃一次，確認掃出來是對的網址。
+    - 本機測試：Playwright 用 `add_init_script` 先放 `window.__LAIFU_TEST`（假的 `init／isLoggedIn／getFriendship／login`），換 User-Agent 測「手機 LINE（UA 有 ` Line/`）」「手機其他瀏覽器」「電腦」三種；2026-11-23 共 23 項（含 QR 實掃、手機版面、去加好友回來自動放行、LINE 查不了要放行、從登入回來不播短片、本機不載 LINE 程式、Console 0 錯誤）。
+    - 正式站測試：無頭 Chrome 沒登入 LINE，真的 LINE 程式初始化成功時狀態會是 `login`（擋下、顯示 QR）；如果是 `error`，代表 LIFF ID 或 Endpoint 設錯（使用者看不出來，因為查不了會放行），要回 LINE Developers 查。
 
 ---
 
@@ -238,6 +248,7 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 5. 用 `performance.getEntriesByType('resource')` 確認沒有 200／206／304 以外的狀態碼；改過 `?v=` 的檔要看到新版號。
 6. 站卡有改動時：確認「計畫表」「👇 看更多」預設收著；從查基金點一個收在看更多裡的關鍵字（例如「跨社」「保障期間」），要自動展開並捲到那句；手機第一眼量起來不要比 4 個多太多畫面（見 §4 第 20 點）。
 7. 語音導覽有改動時：用 `--autoplay-policy=user-gesture-required` 開 Chromium，點「唸給我聽」要真的在播、按「下一站」要自動接著唸且上一站停掉、再按一下要停、自己按停後換站不自動唸、`visibilitychange`（模擬切到背景）要立刻停、靜音時按要跳提示、關抽屜要停；`vo_stop_*.mp3` 只在按下時才出現 200／206 請求。
+8. 來福好友守門有改動時：照 §4 第 22 點跑假 LINE 的測試；上線後用無頭 Chrome 開正式站，關掉開場短片後狀態要是 `login`（不是 `error`）、畫面上的 QR 掃得出 `https://liff.line.me/2009715141-C0OePFPc`。注意：正式站測試前要先在首頁記下 `localStorage`（見 §4 第 19 點）。
 
 ---
 
@@ -255,6 +266,8 @@ curl.exe -sI "$base/tools/generate_audio_local.py" | Select-String "^HTTP/"  # �
 - [x] 每站語音導覽（2026-11-23，8 站，manifest 新增 `stop_<站>`；同日從 Edge-TTS 曉臻換成 Gemini 女聲 `Sulafat`＋聊天說法；已部署，版本 `51c4db91-7c8a-42d0-9f9e-45dbd233fdf3`，正式站 13 項語音測試都過）。
 - [x] 兩個聽寫程式意見不一樣的 5 小段（3 號站「D 計畫」「健康聲明書」「核保通過」、6 號站「健康聲明書」、7 號站「健康聲明書」「核保通過」、8 號站「就選 A3」前有沒有多「我也」）：切成小段給使用者聽，使用者聽完說「上線」（2026-11-23）。之後若有社員反映哪一站念錯，用 `--stop` 只重錄那一站（一站約台幣 0.5 元，先問）。
 - [ ] 開場、勝利、5 攤導覽的 7 句語音（`vo_*.mp3`，Edge-TTS）改成跟語音導覽同一個 Gemini 聲音：使用者想統一再做（要花錢）。
+- [x] 進島前先加來福好友（2026-11-23，LIFF `2009715141-C0OePFPc`，做法跟選罷法一樣；本機假 LINE 測試 23 項通過；已部署，版本 `d778f10a-f8d2-4177-b53a-5e1ce6d5594a`，正式站真的 LINE 程式測 6 項、語音導覽 13 項都過）。手機 LINE 實機（登入授權、加好友、回來放行）由使用者測；AI 只能用無頭瀏覽器測到「沒登入就擋下」。
+- [ ] 分享出去的連結、戰績卡／路線卡上的 QR code 目前是網站網址；在 LINE 裡打開一樣會走登入＋加好友流程。若要改成 LINE 入口網址（`liff.line.me/…`，在 LINE 裡少一步），先問使用者，QR 要重產並實掃驗證。
 - [ ] 語音導覽的台語版（意傳媠聲，`ffmpeg` 調到約 `-18.5 dBFS`）：使用者要的話再做；台語稿要另外寫成台語說法，不能直接把華語稿丟進去。
 - [ ] 小管家角色在島上走到目前這站（沿用島民走路動畫）。
 - [x] 修正 §4 第 18 點的遊戲題庫與 `funds_data.js` 錯漏（2026-11-22）。

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=18" />
+  <link rel="stylesheet" href="css/styles.css?v=19" />
 
   <script type="importmap">
     {
@@ -329,6 +329,24 @@
     </div>
   </div>
 
+  <!-- 🐶 進互助島之前確認是來福好友（真的問 LINE；不是好友要先加，才能進島。js/core/laifu_gate.js） -->
+  <div id="laifu-gate" class="laifu-gate hidden" role="dialog" aria-modal="true" aria-labelledby="laifu-gate-title">
+    <div class="laifu-card">
+      <div class="laifu-head"><h2 id="laifu-gate-title">🐶 先加來福好友，就能逛互助島！</h2></div>
+      <div class="laifu-body">
+        <div class="laifu-intro">
+          <img class="laifu-dog" src="assets/images/laifu_dog.jpg" alt="來福" width="96" height="96">
+          <div>
+            <div class="laifu-lead">來福是儲互社的 LINE 小幫手：</div>
+            <ul class="laifu-feats"><li>問法規</li><li>防詐提醒</li><li>早安圖</li><li>查股金</li></ul>
+          </div>
+        </div>
+        <div class="laifu-name-note">（LINE 上的名字是「儲蓄互助社｜生活圈」）</div>
+        <div class="laifu-step" id="laifu-gate-step"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Toast -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
@@ -341,13 +359,14 @@
   <script defer src="js/core/storage.js?v=16"></script>
   <script defer src="js/core/handbook.js?v=17"></script>
   <script defer src="js/core/share_card.js?v=17"></script>
+  <script defer src="js/core/laifu_gate.js?v=1"></script>
   <script defer src="js/games/game1_swipe.js?v=16"></script>
   <script defer src="js/games/game2_clinic.js?v=16"></script>
   <script defer src="js/games/game3_detective.js?v=16"></script>
   <script defer src="js/games/game4_life85.js?v=16"></script>
   <script defer src="js/games/game5_calendar.js?v=16"></script>
   <script defer src="js/tour/tour.js?v=18"></script>
-  <script defer src="js/app.js?v=16"></script>
+  <script defer src="js/app.js?v=17"></script>
 
   <!-- 19-Hex Architectural Diorama 3D World（3D 函式庫載不到時自動切 2D 導覽） -->
   <script type="module" src="js/scene/island3d.js?v=16" onerror="window.APP && window.APP.show2DFallback('3D 島載入失敗，已切換 2D 導覽')"></script>

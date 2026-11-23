@@ -827,6 +827,7 @@ window.APP = (function () {
       window.SOUND.releaseVideoHold();
     }
     syncIslandAndHud();
+    window.LAIFU_GATE && window.LAIFU_GATE.require();   // 要進島了：不是來福好友先擋下來
   }
 
   function showIntroUnmute(label) {
@@ -880,6 +881,7 @@ window.APP = (function () {
   }
 
   function init() {
+    window.LAIFU_GATE && window.LAIFU_GATE.init();   // 一開始就請 LINE 確認是不是來福好友（看短片時在背景確認）
     window.HANDBOOK.init();
     bindGlobalEvents();
     bindBackButton();
@@ -891,10 +893,13 @@ window.APP = (function () {
     }
     window.ASSETS_MANIFEST.scanAll().then((det) => {
       window.TOUR && window.TOUR.refresh();   // 角色圖到位後重畫導覽畫面
-      if (det && det.videos && det.videos.intro) {
+      // 從 LINE 登入回來就不再播一次開場短片
+      const backFromLine = window.LAIFU_GATE && window.LAIFU_GATE.returningFromLogin();
+      if (det && det.videos && det.videos.intro && !backFromLine) {
         openIntroVideo();
       } else {
         syncIslandAndHud();
+        window.LAIFU_GATE && window.LAIFU_GATE.require();
       }
     });
   }

@@ -1887,3 +1887,95 @@ button:disabled { opacity: 0.52; cursor: not-allowed; }
 .tour-voice-bars i:nth-child(4) { animation-delay: 0.45s; }
 @keyframes tourVoiceBar { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .tour-voice-bars i { animation: none; transform: scaleY(0.7); } }
+
+/* ---------------- 來福好友守門（2026-11-23；js/core/laifu_gate.js） ----------------
+   一打開網站、開場短片關掉之後，不是來福好友就整頁擋住（沒有關閉鈕）。大字、LINE 綠按鈕給長輩好認。 */
+.laifu-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(20, 18, 22, 0.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.laifu-card {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-paper);
+  border-radius: 26px;
+  border: 3px solid var(--emerald);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  animation: popIn 0.2s ease;
+}
+.laifu-head { padding: 16px 18px; background: linear-gradient(135deg, #C2410C 0%, #14532D 100%); }
+.laifu-head h2 { margin: 0; color: #fff; font-size: 1.28rem; font-weight: 900; line-height: 1.4; }
+.laifu-body { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px 20px; }
+.laifu-intro { display: flex; align-items: center; gap: 14px; }
+.laifu-dog { width: 96px; height: 96px; border-radius: 50%; border: 3px solid var(--amber); object-fit: cover; flex-shrink: 0; background: #fff; }
+.laifu-lead { font-weight: 900; font-size: 1.15rem; color: var(--emerald-dark); margin-bottom: 6px; }
+.laifu-feats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.laifu-feats li { font-weight: 800; font-size: 1.12rem; color: var(--ink-dark); }
+.laifu-feats li::before { content: '・'; color: #C2410C; }
+.laifu-name-note { font-size: 1rem; color: var(--ink-mid); font-weight: 700; text-align: center; }
+.laifu-step { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.laifu-btn {
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 16px;
+  background: #06C755;   /* LINE 綠 */
+  color: #fff;
+  font-family: inherit;
+  font-size: 1.22rem;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #04943F;
+}
+.laifu-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #04943F; }
+.laifu-btn2 {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 2px solid var(--border-warm);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink-dark);
+  font-family: inherit;
+  font-size: 1.08rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.laifu-hint { font-size: 1.02rem; color: var(--ink-mid); font-weight: 700; line-height: 1.6; text-align: center; }
+.laifu-msg { font-size: 1.12rem; font-weight: 800; color: var(--emerald-dark); text-align: center; padding: 14px 6px; }
+.laifu-note { font-size: 1.06rem; font-weight: 900; color: var(--red-dark); text-align: center; line-height: 1.5; }
+.laifu-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.laifu-qr { width: 200px; height: 200px; background: #fff; padding: 6px; border-radius: 12px; border: 2px solid var(--amber); shape-rendering: crispEdges; }
+.laifu-qr-cap { font-weight: 900; color: var(--ink-dark); font-size: 1.06rem; text-align: center; line-height: 1.5; }
+.laifu-link {
+  align-self: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--indigo);
+  font-family: inherit;
+  font-size: 1.02rem;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 420px) {
+  .laifu-dog { width: 80px; height: 80px; }
+  .laifu-qr { width: 180px; height: 180px; }
+}
