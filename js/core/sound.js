@@ -261,16 +261,27 @@ window.SOUND = (function () {
     activeAudio = null;
   }
 
+  // 語音結束或被打斷時通知呼叫的人（每站語音導覽用來切換按鈕）：reason = ended／stopped／error／blocked
+  function finishVoice(v, reason) {
+    const cb = v && v._onDone;
+    if (!cb) return;
+    v._onDone = null;
+    try { cb(reason); } catch {}
+  }
+
   function stopVoice() {
     if (activeVoice) {
-      try { activeVoice.onended = null; activeVoice.onerror = null; activeVoice.pause(); } catch {}
+      const v = activeVoice;
       activeVoice = null;
+      try { v.onended = null; v.onerror = null; v.pause(); } catch {}
+      finishVoice(v, 'stopped');
     }
     voiceDucking = false;
     applyDuckingVolume();
   }
 
-  function playVoice(key) {
+  // opts.onDone(reason)：播完、被停掉（離開頁面、靜音、換別句）、載入失敗或被瀏覽器擋下時都會叫一次
+  function playVoice(key, opts = {}) {
     if (!enabled || !key) return false;
     const url = window.ASSETS_MANIFEST && window.ASSETS_MANIFEST.getAudioUrl(key);
     if (!url) return false;
@@ -278,21 +289,23 @@ window.SOUND = (function () {
       stopVoice();
       const v = new Audio(url);
       v.volume = 0.96;
+      v._onDone = typeof opts.onDone === 'function' ? opts.onDone : null;
       activeVoice = v;
       voiceDucking = true;
       lastVoiceMs = Date.now();
       applyDuckingVolume();
 
-      const restore = () => {
+      const restore = (reason) => {
         if (activeVoice === v) {
           activeVoice = null;
           voiceDucking = false;
           applyDuckingVolume();
         }
+        finishVoice(v, reason);
       };
-      v.onended = restore;
-      v.onerror = restore;
-      v.play().catch(restore);
+      v.onended = () => restore('ended');
+      v.onerror = () => restore('error');
+      v.play().catch(() => restore('blocked'));
       return true;
     } catch {
       voiceDucking = false;
@@ -376,6 +389,8 @@ window.SOUND = (function () {
       if (enabled && bgmStarted && !pausedForVideo) startBgm();
     },
     playVoice,
+    stopVoice,
+    isVoicePlaying: () => Boolean(activeVoice),
     playReaction,
     click() {
       playTone(640, 0.065, 'sine', 0.085);

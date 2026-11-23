@@ -14,3 +14,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 node_modules/
+
+# 金鑰檔（例如語音導覽用的 GOOGLE_TTS_API_KEY），絕對不推上公開儲存庫
+.env
+.env.*

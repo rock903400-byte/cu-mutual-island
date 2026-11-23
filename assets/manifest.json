@@ -39,6 +39,14 @@
     "booth_game2": true,
     "booth_game3": true,
     "booth_game4": true,
-    "booth_game5": true
+    "booth_game5": true,
+    "stop_lp": true,
+    "stop_ls": true,
+    "stop_group": true,
+    "stop_accident": true,
+    "stop_senior": true,
+    "stop_cancer": true,
+    "stop_ci": true,
+    "stop_officer": true
   }
 }

@@ -9,6 +9,9 @@ window.TOUR = (function () {
   let currentStopId = null;
   let currentSeq = [];
   let greeted = false;
+  let narrating = null;           // 正在唸的站
+  let listening = false;          // 語音導覽模式：按過「唸給我聽」後，換站會自動接著唸
+  let suppressVoiceDone = false;  // 導覽自己換站時停掉語音，不要把模式關掉
   const mqMobile = window.matchMedia('(max-width: 820px)');
 
   const C = () => window.TOUR_CONTENT;
@@ -123,6 +126,90 @@ window.TOUR = (function () {
     if (!nowFull) userCollapsed = true;
     syncExpandBtn();
     requestAnimationFrame(updateViewInset);
+  }
+
+  /* ---------------- 每站語音導覽（台灣華語，tools/generate_stop_voice.py 產生） ---------------- */
+  const voiceKey = (id) => `stop_${id}`;
+  const hasVoice = (id) => Boolean(window.ASSETS_MANIFEST && window.ASSETS_MANIFEST.getAudioUrl(voiceKey(id)));
+
+  function voiceHint(state) {
+    if (state === 'playing') return '正在唸這一站…';
+    if (state === 'ended') {
+      const idx = currentSeq.indexOf(currentStopId);
+      return idx >= 0 && idx < currentSeq.length - 1 ? '聽完了：按「下一站」會接著唸' : '聽完了，可以往下看例子';
+    }
+    return '約 1 分鐘，不用看字也知道重點';
+  }
+
+  // 圖示用線條畫（不用 ⏹ 這類符號：有些手機不當彩色 emoji，白底上會看不見）
+  const VOICE_ICONS = {
+    idle: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+    playing: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></svg>',
+    ended: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4.5v5h5"/></svg>'
+  };
+
+  function voiceBtnInner(state) {
+    const ico = VOICE_ICONS[state] || VOICE_ICONS.idle;
+    const label = state === 'playing' ? '停止播放' : state === 'ended' ? '再聽一次' : '唸給我聽';
+    return `
+      <span class="tour-voice-ico" aria-hidden="true">${ico}</span>
+      <span class="tour-voice-txt"><strong>${label}</strong><small>${voiceHint(state)}</small></span>
+      ${state === 'playing' ? '<span class="tour-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' : ''}`;
+  }
+
+  function renderVoiceBtn(id) {
+    return hasVoice(id) ? `<button type="button" class="tour-voice-btn" data-tour-voice aria-pressed="false">${voiceBtnInner('idle')}</button>` : '';
+  }
+
+  function setVoiceBtn(state) {
+    const btn = document.querySelector('#explore-body .tour-voice-btn');
+    if (!btn) return;
+    btn.innerHTML = voiceBtnInner(state);
+    btn.classList.toggle('playing', state === 'playing');
+    btn.setAttribute('aria-pressed', String(state === 'playing'));
+  }
+
+  function onVoiceDone(id, reason) {
+    if (narrating === id) narrating = null;
+    if (suppressVoiceDone) return;
+    // 不是自然播完（使用者按停、靜音、離開頁面、瀏覽器擋下）→ 結束語音導覽模式
+    if (reason !== 'ended') listening = false;
+    if (currentView === 'stop' && currentStopId === id) setVoiceBtn(reason === 'ended' ? 'ended' : 'idle');
+  }
+
+  // 一定要在使用者點擊的同一輪呼叫（iPhone 和 LINE 才會放行有聲播放）
+  function playStopVoice(id) {
+    if (!hasVoice(id) || !window.SOUND) return;
+    if (!window.SOUND.isEnabled()) {
+      listening = false;
+      window.APP && window.APP.toast('🔇 目前是靜音：先點右上角的喇叭打開聲音，再按「唸給我聽」');
+      return;
+    }
+    const ok = window.SOUND.playVoice(voiceKey(id), { onDone: (reason) => onVoiceDone(id, reason) });
+    if (!ok) { listening = false; setVoiceBtn('idle'); return; }
+    narrating = id;
+    listening = true;
+    setVoiceBtn('playing');
+  }
+
+  // keepListening：換站時保留語音導覽模式，下一站自動接著唸；離開導覽就整個關掉
+  function stopNarration(keepListening) {
+    if (narrating && window.SOUND) {
+      suppressVoiceDone = true;
+      window.SOUND.stopVoice();
+      suppressVoiceDone = false;
+    }
+    narrating = null;
+    if (!keepListening) listening = false;
+  }
+
+  function toggleVoice() {
+    if (narrating && narrating === currentStopId) {
+      stopNarration(false);
+      setVoiceBtn('idle');
+    } else {
+      playStopVoice(currentStopId);
+    }
   }
 
   /* ---------------- 3D 島同步：站號名牌、已逛、目前這站、協作線 ---------------- */
@@ -253,6 +340,7 @@ window.TOUR = (function () {
     return `
       <article class="tour-stop" style="--fund-color:${f.color}">
         ${renderHero(f)}
+        ${renderVoiceBtn(f.id)}
         <div class="tour-oneliner">${fmt(s.oneLiner)}</div>
         ${note ? `<p class="tour-persona-note">${p.icon} ${note}</p>` : ''}
         <div class="tour-keynums">
@@ -300,6 +388,7 @@ window.TOUR = (function () {
 
   /* ---------------- 三個畫面：首頁、站卡、逛完 ---------------- */
   function openHome() {
+    stopNarration(false);
     window.SOUND && window.SOUND.ensureBgm();
     if (!greeted) {
       greeted = true;
@@ -375,9 +464,13 @@ window.TOUR = (function () {
     syncIsland();
   }
 
+  // opts.q：從查基金點進來的關鍵字；opts.rerender：同一站重畫（角色圖載好、換身分），不打斷正在唸的語音
   function openStop(id, opts = {}) {
     const f = fundOf(id);
     if (!f) return;
+    const rerender = Boolean(opts.rerender) && currentView === 'stop' && currentStopId === id;
+    const autoVoice = !rerender && listening;
+    if (!rerender) stopNarration(true);
     window.SOUND && window.SOUND.ensureBgm();
     const personaKey = getPersonaKey();
     const persona = getPersona(personaKey);
@@ -398,6 +491,8 @@ window.TOUR = (function () {
     setTourBar(renderBar(seq, idx));
     applySheet(true);
     if (opts.q) revealMatch(opts.q);
+    if (rerender && narrating === id) setVoiceBtn('playing');
+    else if (autoVoice) playStopVoice(id);   // 語音導覽模式：換站接著唸（仍在使用者點擊的同一輪）
 
     const isl = I();
     // 導覽鏡頭拉遠一點：手機上方只剩約四成畫面，要看得到這站和旁邊幾站
@@ -408,6 +503,7 @@ window.TOUR = (function () {
   }
 
   function openDone() {
+    stopNarration(false);
     const personaKey = getPersonaKey();
     const p = getPersona(personaKey);
     const route = getRoute(personaKey);
@@ -506,6 +602,7 @@ window.TOUR = (function () {
   }
 
   function openSearch(q = '') {
+    stopNarration(false);
     window.SOUND && window.SOUND.ensureBgm();
     const query = String(q || '').trim().slice(0, 30);
     const results = query ? searchStops(query) : [];
@@ -590,12 +687,13 @@ window.TOUR = (function () {
     const isl = I();
     if (isl && isl.setStageFilter) isl.setStageFilter(k, k === 'all' ? null : getRoute(k));
     if (currentView === 'home') openHome();
-    else if (currentView === 'stop' && currentStopId) openStop(currentStopId);
+    else if (currentView === 'stop' && currentStopId) openStop(currentStopId, { rerender: true });
     return getPersona(k);
   }
 
-  // 離開導覽畫面（關抽屜、開遊戲、開挑戰區清單）時清掉導覽狀態
+  // 離開導覽畫面（關抽屜、開遊戲、開挑戰區清單）時清掉導覽狀態，語音導覽也一起停
   function reset() {
+    stopNarration(false);
     currentView = null;
     currentStopId = null;
     setTourBar('');
@@ -616,13 +714,14 @@ window.TOUR = (function () {
   // 角色圖載入完成後重畫目前的導覽畫面（逛完畫面不重畫，免得重放煙火）
   function refresh() {
     if (currentView === 'home') openHome();
-    else if (currentView === 'stop' && currentStopId) openStop(currentStopId);
+    else if (currentView === 'stop' && currentStopId) openStop(currentStopId, { rerender: true });
   }
 
   /* ---------------- 事件（委派，只綁一次） ---------------- */
   function handleClick(e) {
-    const t = e.target.closest('[data-persona],[data-tour-start],[data-tour-go],[data-tour-prev],[data-tour-next],[data-tour-home],[data-tour-game],[data-open-challenge],[data-tour-close],[data-tour-search],[data-tour-search-go],[data-tour-handbook],[data-tour-routecard],[data-tour-fold-close]');
+    const t = e.target.closest('[data-persona],[data-tour-start],[data-tour-go],[data-tour-prev],[data-tour-next],[data-tour-home],[data-tour-game],[data-open-challenge],[data-tour-close],[data-tour-search],[data-tour-search-go],[data-tour-handbook],[data-tour-routecard],[data-tour-fold-close],[data-tour-voice]');
     if (!t || t.disabled) return;
+    if (t.hasAttribute('data-tour-voice')) { toggleVoice(); return; }   // 不先放點擊音，免得蓋過第一個字
     window.SOUND && window.SOUND.click();
     if (t.hasAttribute('data-tour-fold-close')) {
       const d = t.closest('details');

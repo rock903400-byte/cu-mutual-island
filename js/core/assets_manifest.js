@@ -42,7 +42,16 @@ window.ASSETS_MANIFEST = {
     booth_game2: 'assets/audio/vo_booth_2.mp3',
     booth_game3: 'assets/audio/vo_booth_3.mp3',
     booth_game4: 'assets/audio/vo_booth_4.mp3',
-    booth_game5: 'assets/audio/vo_booth_5.mp3'
+    booth_game5: 'assets/audio/vo_booth_5.mp3',
+    // 每站語音導覽（tools/generate_stop_voice.py 產生；重做音檔後把 ?v= 加 1）
+    stop_lp: 'assets/audio/vo_stop_lp.mp3?v=1',
+    stop_ls: 'assets/audio/vo_stop_ls.mp3?v=1',
+    stop_group: 'assets/audio/vo_stop_group.mp3?v=1',
+    stop_accident: 'assets/audio/vo_stop_accident.mp3?v=1',
+    stop_senior: 'assets/audio/vo_stop_senior.mp3?v=1',
+    stop_cancer: 'assets/audio/vo_stop_cancer.mp3?v=1',
+    stop_ci: 'assets/audio/vo_stop_ci.mp3?v=1',
+    stop_officer: 'assets/audio/vo_stop_officer.mp3?v=1'
   },
   detected: {
     model3d: false,
@@ -56,7 +65,7 @@ window.ASSETS_MANIFEST = {
       return this.detected;
     }
     try {
-      const res = await fetch('assets/manifest.json?v=14', { cache: 'no-store' });
+      const res = await fetch('assets/manifest.json?v=15', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         this.detected.model3d = Boolean(data.model3d);
